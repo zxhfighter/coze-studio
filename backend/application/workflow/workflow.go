@@ -3497,12 +3497,11 @@ func entityNodeTypeToAPINodeTemplateType(nodeType entity.NodeType) (workflow.Nod
 		// return workflow.NodeTemplateType_DatabaseInsert, nil
 		return workflow.NodeTemplateType(46), nil
 	case entity.NodeTypeJsonSerialization:
-		// return workflow.NodeTemplateType(58), nil
 		return workflow.NodeTemplateType_JsonSerialization, nil
 	case entity.NodeTypeJsonDeserialization:
 		return workflow.NodeTemplateType_JsonDeserialization, nil
 	case entity.NodeTypeKnowledgeDeleter:
-	return workflow.NodeTemplateType_DatasetDelete, nil
+	    return workflow.NodeTemplateType_DatasetDelete, nil
 	case entity.NodeTypeLambda:
 		return 0, nil
 	default:
