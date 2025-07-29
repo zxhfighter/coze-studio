@@ -3501,7 +3501,7 @@ func entityNodeTypeToAPINodeTemplateType(nodeType entity.NodeType) (workflow.Nod
 	case entity.NodeTypeJsonDeserialization:
 		return workflow.NodeTemplateType_JsonDeserialization, nil
 	case entity.NodeTypeKnowledgeDeleter:
-	    return workflow.NodeTemplateType_DatasetDelete, nil
+		return workflow.NodeTemplateType_DatasetDelete, nil
 	case entity.NodeTypeLambda:
 		return 0, nil
 	default:
