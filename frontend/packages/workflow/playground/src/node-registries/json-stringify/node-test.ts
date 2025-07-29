@@ -1,5 +1,20 @@
-import type { NodeTestMeta } from '@/test-run-kit';
+import { FlowNodeFormData } from '@flowgram-adapter/free-layout-editor';
 
-const test: NodeTestMeta = true;
+import {
+  type NodeTestMeta,
+  generateParametersToProperties,
+} from '@/test-run-kit';
 
-export { test, type NodeTestMeta };
+export const test: NodeTestMeta = {
+  generateFormInputProperties(node) {
+    const formData = node
+      .getData(FlowNodeFormData)
+      .formModel.getFormItemValueByPath('/');
+    const parameters = formData?.inputs?.inputParameters;
+
+    return generateParametersToProperties(parameters, {
+      node,
+    });
+  },
+};
+export type { NodeTestMeta };
