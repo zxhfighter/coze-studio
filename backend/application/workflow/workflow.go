@@ -195,7 +195,11 @@ func (w *ApplicationService) CreateWorkflow(ctx context.Context, req *workflow.C
 		if !req.IsSetProjectID() || mustParseInt64(req.GetProjectID()) == 0 || !createConversation {
 			conversationName = "Default"
 		}
+<<<<<<< HEAD
 		wf.InitCanvasSchema = vo.GetDefaultInitCanvasJsonSchemaChat(i18n.GetLocale(ctx), conversationName)
+=======
+		wf.InitCanvasSchema = entity.GetDefaultInitCanvasJsonSchemaChat(i18n.GetLocale(ctx), conversationName)
+>>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 	}
 
 	id, err := GetWorkflowDomainSVC().Create(ctx, wf)
@@ -3917,11 +3921,15 @@ func (w *ApplicationService) GetChatFlowRole(ctx context.Context, req *workflow.
 
 	var version string
 	if wf.Meta.AppID != nil {
+<<<<<<< HEAD
 		if vl, err := GetWorkflowDomainSVC().GetWorkflowVersionsByConnector(ctx, mustParseInt64(req.GetConnectorID()), wf.ID, 1); err != nil {
 			return nil, err
 		} else if len(vl) > 0 {
 			version = vl[0]
 		}
+=======
+		version = "" // TODO : search version from DB using AppID
+>>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 	}
 
 	role, err := GetWorkflowDomainSVC().GetChatFlowRole(ctx, mustParseInt64(req.WorkflowID), version)
@@ -4029,6 +4037,7 @@ func (w *ApplicationService) convertChatFlowRole(ctx context.Context, role *enti
 
 	return res, nil
 }
+<<<<<<< HEAD
 
 func (w *ApplicationService) OpenAPIGetWorkflowInfo(ctx context.Context, req *workflow.OpenAPIGetWorkflowInfoRequest) (
 	_ *workflow.OpenAPIGetWorkflowInfoResponse, err error) {
@@ -4092,3 +4101,5 @@ func (w *ApplicationService) OpenAPIGetWorkflowInfo(ctx context.Context, req *wo
 		},
 	}, nil
 }
+=======
+>>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)

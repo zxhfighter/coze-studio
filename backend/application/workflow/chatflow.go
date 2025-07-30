@@ -28,8 +28,6 @@ import (
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
 	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/application/base/ctxutil"
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossconversation"
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossmessage"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
 	"github.com/coze-dev/coze-studio/backend/pkg/errorx"
@@ -233,6 +231,10 @@ func defaultCard() *inputCard {
 	_ = sonic.UnmarshalString(cardTemplate, card)
 	return card
 }
+
+
+
+
 
 func (w *ApplicationService) CreateApplicationConversationDef(ctx context.Context, req *workflow.CreateProjectConversationDefRequest) (resp *workflow.CreateProjectConversationDefResponse, err error) {
 	defer func() {
@@ -1370,3 +1372,5 @@ func renderSelectOptionCardDSL(c string) (string, error) {
 	return rCardString, nil
 
 }
+=======
+>>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)

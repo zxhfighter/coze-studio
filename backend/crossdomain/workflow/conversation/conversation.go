@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*
  * Copyright 2025 coze-dev Authors
  *
@@ -171,7 +172,11 @@ func convertMessage(msgs []*msgentity.Message) ([]*conversation.Message, error) 
 	for _, m := range msgs {
 		msg := &conversation.Message{
 			ID:          m.ID,
+<<<<<<< HEAD
 			Role:        m.Role,
+=======
+			Role:        string(m.Role),
+>>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 			ContentType: string(m.ContentType)}
 
 		if m.MultiContent != nil {
@@ -180,13 +185,22 @@ func convertMessage(msgs []*msgentity.Message) ([]*conversation.Message, error) 
 				if c.FileData != nil {
 					for _, fd := range c.FileData {
 						mcs = append(mcs, &conversation.Content{
+<<<<<<< HEAD
 							Type: c.Type,
 							Uri:  ptr.Of(fd.URI),
+=======
+							Type: string(c.Type),
+							Uri:  ptr.Of(fd.Url),
+>>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 						})
 					}
 				} else {
 					mcs = append(mcs, &conversation.Content{
+<<<<<<< HEAD
 						Type: c.Type,
+=======
+						Type: string(c.Type),
+>>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 						Text: ptr.Of(c.Text),
 					})
 				}
