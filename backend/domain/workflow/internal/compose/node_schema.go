@@ -19,6 +19,7 @@ package compose
 import (
 	"context"
 	"fmt"
+
 	"runtime/debug"
 
 	"github.com/cloudwego/eino/compose"
@@ -432,6 +433,61 @@ func (s *NodeSchema) New(ctx context.Context, inner compose.Runnable[map[string]
 			return nil, err
 		}
 		return invokableNode(s, r.Create), nil
+
+	case entity.NodeTypeConversationUpdate:
+		r := conversation.NewUpdateConversation(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return invokableNode(s, r.Update), nil
+	case entity.NodeTypeConversationList:
+		r, err := conversation.NewConversationList(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return invokableNode(s, r.List), nil
+	case entity.NodeTypeConversationDelete:
+		r := conversation.NewDeleteConversation(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return invokableNode(s, r.Delete), nil
+	case entity.NodeTypeCreateMessage:
+		conf, err := s.ToCreateMessageConfig()
+		if err != nil {
+			return nil, err
+		}
+		r, err := conversation.NewCreateMessage(ctx, conf)
+		if err != nil {
+			return nil, err
+		}
+		return invokableNode(s, r.Create), nil
+	case entity.NodeTypeClearConversationHistory:
+		cfg, err := s.ToClearConversationHistoryConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		r, err := conversation.NewClearConversationHistory(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		return invokableNode(s, r.Clear), nil
+
+	case entity.NodeTypeConversationHistory:
+		cfg, err := s.ToConversationHistoryConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		r, err := conversation.NewConversationHistory(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		return invokableNode(s, r.HistoryMessages), nil
+
 	case entity.NodeTypeMessageList:
 		conf, err := s.ToMessageListConfig()
 		if err != nil {
@@ -442,16 +498,26 @@ func (s *NodeSchema) New(ctx context.Context, inner compose.Runnable[map[string]
 			return nil, err
 		}
 		return invokableNode(s, r.List), nil
-	case entity.NodeTypeClearMessage:
-		conf, err := s.ToClearMessageConfig()
+	case entity.NodeTypeDeleteMessage:
+		conf, err := s.ToDeleteMessageConfig()
 		if err != nil {
 			return nil, err
 		}
-		r, err := conversation.NewClearMessage(ctx, conf)
+		r, err := conversation.NewDeleteMessage(ctx, conf)
 		if err != nil {
 			return nil, err
 		}
-		return invokableNode(s, r.Clear), nil
+		return invokableNode(s, r.Delete), nil
+	case entity.NodeTypeEditMessage:
+		conf, err := s.ToEditMessageConfig()
+		if err != nil {
+			return nil, err
+		}
+		r, err := conversation.NewEditMessage(ctx, conf)
+		if err != nil {
+			return nil, err
+		}
+		return invokableNode(s, r.Edit), nil
 	case entity.NodeTypeIntentDetector:
 		conf, err := s.ToIntentDetectorConfig(ctx)
 		if err != nil {

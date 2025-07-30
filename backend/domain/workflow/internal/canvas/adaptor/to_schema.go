@@ -210,33 +210,43 @@ func normalizePorts(connections []*compose.Connection, nodeMap map[string]*vo.No
 }
 
 var blockTypeToNodeSchema = map[vo.BlockType]func(*vo.Node, ...OptionFn) (*compose.NodeSchema, error){
-	vo.BlockTypeBotStart:            toEntryNodeSchema,
-	vo.BlockTypeBotEnd:              toExitNodeSchema,
-	vo.BlockTypeBotLLM:              toLLMNodeSchema,
-	vo.BlockTypeBotLoopSetVariable:  toLoopSetVariableNodeSchema,
-	vo.BlockTypeBotBreak:            toBreakNodeSchema,
-	vo.BlockTypeBotContinue:         toContinueNodeSchema,
-	vo.BlockTypeCondition:           toSelectorNodeSchema,
-	vo.BlockTypeBotText:             toTextProcessorNodeSchema,
-	vo.BlockTypeBotIntent:           toIntentDetectorSchema,
-	vo.BlockTypeDatabase:            toDatabaseCustomSQLSchema,
-	vo.BlockTypeDatabaseSelect:      toDatabaseQuerySchema,
-	vo.BlockTypeDatabaseInsert:      toDatabaseInsertSchema,
-	vo.BlockTypeDatabaseDelete:      toDatabaseDeleteSchema,
-	vo.BlockTypeDatabaseUpdate:      toDatabaseUpdateSchema,
-	vo.BlockTypeBotHttp:             toHttpRequesterSchema,
-	vo.BlockTypeBotDatasetWrite:     toKnowledgeIndexerSchema,
-	vo.BlockTypeBotDatasetDelete:    toKnowledgeDeleterSchema,
-	vo.BlockTypeBotDataset:          toKnowledgeRetrieverSchema,
-	vo.BlockTypeBotAssignVariable:   toVariableAssignerSchema,
-	vo.BlockTypeBotCode:             toCodeRunnerSchema,
-	vo.BlockTypeBotAPI:              toPluginSchema,
-	vo.BlockTypeBotVariableMerge:    toVariableAggregatorSchema,
-	vo.BlockTypeBotInput:            toInputReceiverSchema,
-	vo.BlockTypeBotMessage:          toOutputEmitterNodeSchema,
-	vo.BlockTypeQuestion:            toQASchema,
-	vo.BlockTypeJsonSerialization:   toJSONSerializeSchema,
-	vo.BlockTypeJsonDeserialization: toJSONDeserializeSchema,
+	vo.BlockTypeBotStart:                 toEntryNodeSchema,
+	vo.BlockTypeBotEnd:                   toExitNodeSchema,
+	vo.BlockTypeBotLLM:                   toLLMNodeSchema,
+	vo.BlockTypeBotLoopSetVariable:       toLoopSetVariableNodeSchema,
+	vo.BlockTypeBotBreak:                 toBreakNodeSchema,
+	vo.BlockTypeBotContinue:              toContinueNodeSchema,
+	vo.BlockTypeCondition:                toSelectorNodeSchema,
+	vo.BlockTypeBotText:                  toTextProcessorNodeSchema,
+	vo.BlockTypeBotIntent:                toIntentDetectorSchema,
+	vo.BlockTypeDatabase:                 toDatabaseCustomSQLSchema,
+	vo.BlockTypeDatabaseSelect:           toDatabaseQuerySchema,
+	vo.BlockTypeDatabaseInsert:           toDatabaseInsertSchema,
+	vo.BlockTypeDatabaseDelete:           toDatabaseDeleteSchema,
+	vo.BlockTypeDatabaseUpdate:           toDatabaseUpdateSchema,
+	vo.BlockTypeBotHttp:                  toHttpRequesterSchema,
+	vo.BlockTypeBotDatasetWrite:          toKnowledgeIndexerSchema,
+	vo.BlockTypeBotDatasetDelete:         toKnowledgeDeleterSchema,
+	vo.BlockTypeBotDataset:               toKnowledgeRetrieverSchema,
+	vo.BlockTypeBotAssignVariable:        toVariableAssignerSchema,
+	vo.BlockTypeBotCode:                  toCodeRunnerSchema,
+	vo.BlockTypeBotAPI:                   toPluginSchema,
+	vo.BlockTypeBotVariableMerge:         toVariableAggregatorSchema,
+	vo.BlockTypeBotInput:                 toInputReceiverSchema,
+	vo.BlockTypeBotMessage:               toOutputEmitterNodeSchema,
+	vo.BlockTypeQuestion:                 toQASchema,
+	vo.BlockTypeJsonSerialization:        toJSONSerializeSchema,
+	vo.BlockTypeJsonDeserialization:      toJSONDeserializeSchema,
+	vo.BlockTypeCreateConversation:       toCreateConversationSchema,
+	vo.BlockTypeConversationUpdate:       toConversationUpdateSchema,
+	vo.BlockTypeConversationDelete:       toConversationDeleteSchema,
+	vo.BlockTypeConversationList:         toConversationListSchema,
+	vo.BlockTypeClearConversationHistory: toClearConversationHistorySchema,
+	vo.BlockTypeConversationHistory:      toConversationHistorySchema,
+	vo.BlockTypeCreateMessage:            toCreateMessageSchema,
+	vo.BlockTypeBotMessageList:           toMessageListSchema,
+	vo.BlockTypeDeleteMessage:            toDeleteMessageSchema,
+	vo.BlockTypeEditeMessage:             toEditMessageSchema,
 }
 
 var blockTypeToSkip = map[vo.BlockType]bool{
@@ -1394,11 +1404,10 @@ func toHttpRequesterSchema(n *vo.Node, opts ...OptionFn) (*compose.NodeSchema, e
 		formDataVars := make([]string, 0)
 		for i := range inputs.Body.BodyData.FormData.Data {
 			p := inputs.Body.BodyData.FormData.Data[i]
-			formDataVars = append(formDataVars, p.Name)
 			if p.Input.Type == vo.VariableTypeString && p.Input.AssistType > vo.AssistTypeNotSet && p.Input.AssistType < vo.AssistTypeTime {
 				bodyConfig.FormDataConfig.FileTypeMapping[p.Name] = true
+				formDataVars = append(formDataVars, p.Name)
 			}
-
 		}
 		md5FieldMapping.SetBodyFields(formDataVars...)
 	case httprequester.BodyTypeRawText:
@@ -1933,6 +1942,180 @@ func toJSONDeserializeSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, er
 		Name: n.Data.Meta.Title,
 	}
 
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toCreateConversationSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeCreateConversation,
+		Name: n.Data.Meta.Title,
+	}
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toConversationUpdateSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeConversationUpdate,
+		Name: n.Data.Meta.Title,
+	}
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toConversationListSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeConversationList,
+		Name: n.Data.Meta.Title,
+	}
+
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toCreateMessageSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeCreateMessage,
+		Name: n.Data.Meta.Title,
+	}
+
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toMessageListSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeMessageList,
+		Name: n.Data.Meta.Title,
+	}
+
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toDeleteMessageSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeDeleteMessage,
+		Name: n.Data.Meta.Title,
+	}
+
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toEditMessageSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeEditMessage,
+		Name: n.Data.Meta.Title,
+	}
+
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toConversationHistorySchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeConversationHistory,
+		Name: n.Data.Meta.Title,
+	}
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toClearConversationHistorySchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeClearConversationHistory,
+		Name: n.Data.Meta.Title,
+	}
+	if err := SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
+}
+
+func toConversationDeleteSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, error) {
+	ns := &compose.NodeSchema{
+		Key:  vo.NodeKey(n.ID),
+		Type: entity.NodeTypeConversationDelete,
+		Name: n.Data.Meta.Title,
+	}
 	if err := SetInputsForNodeSchema(n, ns); err != nil {
 		return nil, err
 	}

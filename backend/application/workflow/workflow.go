@@ -93,7 +93,7 @@ func (w *ApplicationService) GetNodeTemplateList(ctx context.Context, req *workf
 
 	toQueryTypes := make(map[entity.NodeType]bool)
 	for _, t := range req.NodeTypes {
-		entityType, err := nodeType2EntityNodeType(t)
+		entityType, err := entity.BlockType2EntityNodeType(t)
 		if err != nil {
 			logs.Warnf("get node type %v failed, err:=%v", t, err)
 			continue
@@ -116,7 +116,7 @@ func (w *ApplicationService) GetNodeTemplateList(ctx context.Context, req *workf
 			Name: category,
 		}
 		for _, nodeMeta := range nodeMetaList {
-			tplType, err := entityNodeTypeToAPINodeTemplateType(nodeMeta.Type)
+			tplType, err := entity.NodeTypeToAPINodeTemplateType(nodeMeta.Type)
 			if err != nil {
 				return nil, err
 			}
@@ -169,6 +169,21 @@ func (w *ApplicationService) CreateWorkflow(ctx context.Context, req *workflow.C
 	if err := checkUserSpace(ctx, uID, spaceID); err != nil {
 		return nil, err
 	}
+
+	var createConversation bool
+	if req.ProjectID != nil && req.IsSetFlowMode() && req.GetFlowMode() == workflow.WorkflowMode_ChatFlow && req.IsSetCreateConversation() && req.GetCreateConversation() {
+		createConversation = true
+		_, err := GetWorkflowDomainSVC().CreateDraftConversationTemplate(ctx, &vo.CreateConversationTemplateMeta{
+			AppID:   mustParseInt64(req.GetProjectID()),
+			UserID:  uID,
+			SpaceID: spaceID,
+			Name:    req.Name,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	wf := &vo.MetaCreate{
 		CreatorID:        uID,
 		SpaceID:          spaceID,
@@ -179,6 +194,13 @@ func (w *ApplicationService) CreateWorkflow(ctx context.Context, req *workflow.C
 		AppID:            parseInt64(req.ProjectID),
 		Mode:             ternary.IFElse(req.IsSetFlowMode(), req.GetFlowMode(), workflow.WorkflowMode_Workflow),
 		InitCanvasSchema: entity.GetDefaultInitCanvasJsonSchema(i18n.GetLocale(ctx)),
+	}
+	if req.IsSetFlowMode() && req.GetFlowMode() == workflow.WorkflowMode_ChatFlow {
+		conversationName := req.Name
+		if !req.IsSetProjectID() || mustParseInt64(req.GetProjectID()) == 0 || !createConversation {
+			conversationName = "Default"
+		}
+		wf.InitCanvasSchema = entity.GetDefaultInitCanvasJsonSchemaChat(i18n.GetLocale(ctx), conversationName)
 	}
 
 	id, err := GetWorkflowDomainSVC().Create(ctx, wf)
@@ -1034,6 +1056,18 @@ func (w *ApplicationService) CopyWorkflowFromLibraryToApp(ctx context.Context, w
 	wf, err := GetWorkflowDomainSVC().CopyWorkflow(ctx, workflowID, vo.CopyWorkflowPolicy{
 		TargetAppID: &appID,
 	})
+
+	if wf.Mode == workflow.WorkflowMode_ChatFlow {
+		err = GetWorkflowDomainSVC().CopyChatFlowRole(ctx, &vo.CopyRolePolicy{
+			SourceID:  workflowID,
+			TargetID:  wf.ID,
+			CreatorID: wf.CreatorID,
+		})
+		if err != nil {
+			return 0, err
+		}
+	}
+
 	if err != nil {
 		return 0, err
 	}
@@ -1127,7 +1161,7 @@ func (w *ApplicationService) MoveWorkflowFromAppToLibrary(ctx context.Context, w
 }
 
 func convertNodeExecution(nodeExe *entity.NodeExecution) (*workflow.NodeResult, error) {
-	nType, err := entityNodeTypeToAPINodeTemplateType(nodeExe.NodeType)
+	nType, err := entity.NodeTypeToAPINodeTemplateType(nodeExe.NodeType)
 	if err != nil {
 		return nil, err
 	}
@@ -1317,7 +1351,7 @@ func convertStreamRunEvent(workflowID int64) func(msg *entity.Message) (res *wor
 			}
 
 			var nodeType workflow.NodeTemplateType
-			nodeType, err = entityNodeTypeToAPINodeTemplateType(msg.NodeType)
+			nodeType, err = entity.NodeTypeToAPINodeTemplateType(msg.NodeType)
 			if err != nil {
 				logs.Errorf("convert node type %v failed, err:=%v", msg.NodeType, err)
 				nodeType = workflow.NodeTemplateType(0)
@@ -3338,178 +3372,6 @@ func toWorkflowParameter(nType *vo.NamedTypeInfo) (*workflow.Parameter, error) {
 	return wp, nil
 }
 
-func nodeType2EntityNodeType(t string) (entity.NodeType, error) {
-	i, err := strconv.Atoi(t)
-	if err != nil {
-		return "", fmt.Errorf("invalid node type string '%s': %w", t, err)
-	}
-
-	switch i {
-	case 1:
-		return entity.NodeTypeEntry, nil
-	case 2:
-		return entity.NodeTypeExit, nil
-	case 3:
-		return entity.NodeTypeLLM, nil
-	case 4:
-		return entity.NodeTypePlugin, nil
-	case 5:
-		return entity.NodeTypeCodeRunner, nil
-	case 6:
-		return entity.NodeTypeKnowledgeRetriever, nil
-	case 8:
-		return entity.NodeTypeSelector, nil
-	case 9:
-		return entity.NodeTypeSubWorkflow, nil
-	case 12:
-		return entity.NodeTypeDatabaseCustomSQL, nil
-	case 13:
-		return entity.NodeTypeOutputEmitter, nil
-	case 15:
-		return entity.NodeTypeTextProcessor, nil
-	case 18:
-		return entity.NodeTypeQuestionAnswer, nil
-	case 19:
-		return entity.NodeTypeBreak, nil
-	case 20:
-		return entity.NodeTypeVariableAssignerWithinLoop, nil
-	case 21:
-		return entity.NodeTypeLoop, nil
-	case 22:
-		return entity.NodeTypeIntentDetector, nil
-	case 27:
-		return entity.NodeTypeKnowledgeIndexer, nil
-	case 28:
-		return entity.NodeTypeBatch, nil
-	case 29:
-		return entity.NodeTypeContinue, nil
-	case 30:
-		return entity.NodeTypeInputReceiver, nil
-	case 32:
-		return entity.NodeTypeVariableAggregator, nil
-	case 37:
-		return entity.NodeTypeMessageList, nil
-	case 38:
-		return entity.NodeTypeClearMessage, nil
-	case 39:
-		return entity.NodeTypeCreateConversation, nil
-	case 40:
-		return entity.NodeTypeVariableAssigner, nil
-	case 42:
-		return entity.NodeTypeDatabaseUpdate, nil
-	case 43:
-		return entity.NodeTypeDatabaseQuery, nil
-	case 44:
-		return entity.NodeTypeDatabaseDelete, nil
-	case 45:
-		return entity.NodeTypeHTTPRequester, nil
-	case 46:
-		return entity.NodeTypeDatabaseInsert, nil
-	case 58:
-		return entity.NodeTypeJsonSerialization, nil
-	case 59:
-		return entity.NodeTypeJsonDeserialization, nil
-	case 60:
-		return entity.NodeTypeKnowledgeDeleter, nil
-	default:
-		// Handle all unknown or unsupported types here
-		return "", fmt.Errorf("unsupported or unknown node type ID: %d", i)
-	}
-}
-
-// entityNodeTypeToAPINodeTemplateType converts an entity.NodeType to the corresponding workflow.NodeTemplateType.
-func entityNodeTypeToAPINodeTemplateType(nodeType entity.NodeType) (workflow.NodeTemplateType, error) {
-	switch nodeType {
-	case entity.NodeTypeEntry:
-		return workflow.NodeTemplateType_Start, nil
-	case entity.NodeTypeExit:
-		return workflow.NodeTemplateType_End, nil
-	case entity.NodeTypeLLM:
-		return workflow.NodeTemplateType_LLM, nil
-	case entity.NodeTypePlugin:
-		// Maps to Api type in the API model
-		return workflow.NodeTemplateType_Api, nil
-	case entity.NodeTypeCodeRunner:
-		return workflow.NodeTemplateType_Code, nil
-	case entity.NodeTypeKnowledgeRetriever:
-		// Maps to Dataset type in the API model
-		return workflow.NodeTemplateType_Dataset, nil
-	case entity.NodeTypeSelector:
-		// Maps to If type in the API model
-		return workflow.NodeTemplateType_If, nil
-	case entity.NodeTypeSubWorkflow:
-		return workflow.NodeTemplateType_SubWorkflow, nil
-	case entity.NodeTypeDatabaseCustomSQL:
-		// Maps to the generic Database type in the API model
-		return workflow.NodeTemplateType_Database, nil
-	case entity.NodeTypeOutputEmitter:
-		// Maps to Message type in the API model
-		return workflow.NodeTemplateType_Message, nil
-	case entity.NodeTypeTextProcessor:
-		return workflow.NodeTemplateType_Text, nil
-	case entity.NodeTypeQuestionAnswer:
-		return workflow.NodeTemplateType_Question, nil
-	case entity.NodeTypeBreak:
-		return workflow.NodeTemplateType_Break, nil
-	case entity.NodeTypeVariableAssigner:
-		return workflow.NodeTemplateType_AssignVariable, nil
-	case entity.NodeTypeVariableAssignerWithinLoop:
-		return workflow.NodeTemplateType_LoopSetVariable, nil
-	case entity.NodeTypeLoop:
-		return workflow.NodeTemplateType_Loop, nil
-	case entity.NodeTypeIntentDetector:
-		return workflow.NodeTemplateType_Intent, nil
-	case entity.NodeTypeKnowledgeIndexer:
-		// Maps to DatasetWrite type in the API model
-		return workflow.NodeTemplateType_DatasetWrite, nil
-	case entity.NodeTypeBatch:
-		return workflow.NodeTemplateType_Batch, nil
-	case entity.NodeTypeContinue:
-		return workflow.NodeTemplateType_Continue, nil
-	case entity.NodeTypeInputReceiver:
-		return workflow.NodeTemplateType_Input, nil
-	case entity.NodeTypeMessageList:
-		return workflow.NodeTemplateType(37), nil
-	case entity.NodeTypeVariableAggregator:
-		return workflow.NodeTemplateType(32), nil
-	case entity.NodeTypeClearMessage:
-		return workflow.NodeTemplateType(38), nil
-	case entity.NodeTypeCreateConversation:
-		return workflow.NodeTemplateType(39), nil
-	// Note: entity.NodeTypeVariableAggregator (ID 32) has no direct mapping in NodeTemplateType
-	// Note: entity.NodeTypeMessageList (ID 37) has no direct mapping in NodeTemplateType
-	// Note: entity.NodeTypeClearMessage (ID 38) has no direct mapping in NodeTemplateType
-	// Note: entity.NodeTypeCreateConversation (ID 39) has no direct mapping in NodeTemplateType
-	case entity.NodeTypeDatabaseUpdate:
-		return workflow.NodeTemplateType_DatabaseUpdate, nil
-	case entity.NodeTypeDatabaseQuery:
-		// Maps to DatabasesELECT (ID 43) in the API model (note potential typo)
-		return workflow.NodeTemplateType_DatabasesELECT, nil
-	case entity.NodeTypeDatabaseDelete:
-		return workflow.NodeTemplateType_DatabaseDelete, nil
-
-	// Note: entity.NodeTypeHTTPRequester (ID 45) has no direct mapping in NodeTemplateType
-	case entity.NodeTypeHTTPRequester:
-		return workflow.NodeTemplateType(45), nil
-
-	case entity.NodeTypeDatabaseInsert:
-		// Maps to DatabaseInsert (ID 41) in the API model, despite entity ID being 46.
-		// return workflow.NodeTemplateType_DatabaseInsert, nil
-		return workflow.NodeTemplateType(46), nil
-	case entity.NodeTypeJsonSerialization:
-		return workflow.NodeTemplateType(58), nil
-	case entity.NodeTypeJsonDeserialization:
-		return workflow.NodeTemplateType_JsonDeserialization, nil
-	case entity.NodeTypeKnowledgeDeleter:
-		return workflow.NodeTemplateType_DatasetDelete, nil
-	case entity.NodeTypeLambda:
-		return 0, nil
-	default:
-		// Handle entity types that don't have a corresponding NodeTemplateType
-		return workflow.NodeTemplateType(0), fmt.Errorf("cannot map entity node type '%s' to a workflow.NodeTemplateType", nodeType)
-	}
-}
-
 func i64PtrToStringPtr(i *int64) *string {
 	if i == nil {
 		return nil
@@ -3812,4 +3674,352 @@ func checkUserSpace(ctx context.Context, uid int64, spaceID int64) error {
 	}
 
 	return nil
+}
+
+func (w *ApplicationService) populateChatFlowRoleFields(role *workflow.ChatFlowRole, targetRole interface{}) error {
+	var avatarUri, audioStr, bgStr, obStr, srStr, uiStr string
+	var err error
+
+	if role.Avatar != nil {
+		avatarUri = role.Avatar.ImageUri
+
+	}
+	if role.AudioConfig != nil {
+		audioStr, err = sonic.MarshalString(*role.AudioConfig)
+		if err != nil {
+			return vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+	if role.BackgroundImageInfo != nil {
+		bgStr, err = sonic.MarshalString(*role.BackgroundImageInfo)
+		if err != nil {
+			return vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+	if role.OnboardingInfo != nil {
+		obStr, err = sonic.MarshalString(*role.OnboardingInfo)
+		if err != nil {
+			return vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+	if role.SuggestReplyInfo != nil {
+		srStr, err = sonic.MarshalString(*role.SuggestReplyInfo)
+		if err != nil {
+			return vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+	if role.UserInputConfig != nil {
+		uiStr, err = sonic.MarshalString(*role.UserInputConfig)
+		if err != nil {
+			return vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+
+	switch r := targetRole.(type) {
+	case *vo.ChatFlowRoleCreate:
+		if role.Name != nil {
+			r.Name = *role.Name
+		}
+		if role.Description != nil {
+			r.Description = *role.Description
+		}
+		if avatarUri != "" {
+			r.AvatarUri = avatarUri
+		}
+		if audioStr != "" {
+			r.AudioConfig = audioStr
+		}
+		if bgStr != "" {
+			r.BackgroundImageInfo = bgStr
+		}
+		if obStr != "" {
+			r.OnboardingInfo = obStr
+		}
+		if srStr != "" {
+			r.SuggestReplyInfo = srStr
+		}
+		if uiStr != "" {
+			r.UserInputConfig = uiStr
+		}
+	case *vo.ChatFlowRoleUpdate:
+		r.Name = role.Name
+		r.Description = role.Description
+		if avatarUri != "" {
+			r.AvatarUri = ptr.Of(avatarUri)
+		}
+		if audioStr != "" {
+			r.AudioConfig = ptr.Of(audioStr)
+		}
+		if bgStr != "" {
+			r.BackgroundImageInfo = ptr.Of(bgStr)
+		}
+		if obStr != "" {
+			r.OnboardingInfo = ptr.Of(obStr)
+		}
+		if srStr != "" {
+			r.SuggestReplyInfo = ptr.Of(srStr)
+		}
+		if uiStr != "" {
+			r.UserInputConfig = ptr.Of(uiStr)
+		}
+	default:
+		return vo.WrapError(errno.ErrInvalidParameter, fmt.Errorf("invalid type for targetRole: %T", targetRole))
+	}
+
+	return nil
+}
+
+func IsChatFlow(wf *entity.Workflow) bool {
+	if wf == nil || wf.ID == 0 {
+		return false
+	}
+	return wf.Meta.Mode == workflow.WorkflowMode_ChatFlow
+}
+
+func (w *ApplicationService) CreateChatFlowRole(ctx context.Context, req *workflow.CreateChatFlowRoleRequest) (
+	_ *workflow.CreateChatFlowRoleResponse, err error) {
+	defer func() {
+		if panicErr := recover(); panicErr != nil {
+			err = safego.NewPanicErr(panicErr, debug.Stack())
+		}
+
+		if err != nil {
+			err = vo.WrapIfNeeded(errno.ErrChatFlowRoleOperationFail, err, errorx.KV("cause", vo.UnwrapRootErr(err).Error()))
+		}
+	}()
+
+	uID := ctxutil.MustGetUIDFromCtx(ctx)
+	wf, err := GetWorkflowDomainSVC().Get(ctx, &vo.GetPolicy{
+		ID:       mustParseInt64(req.GetChatFlowRole().GetWorkflowID()),
+		MetaOnly: true,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if err = checkUserSpace(ctx, uID, wf.Meta.SpaceID); err != nil {
+		return nil, err
+	}
+
+	role := req.GetChatFlowRole()
+
+	if !IsChatFlow(wf) {
+		logs.CtxWarnf(ctx, "CreateChatFlowRole not chat flow, workflowID: %d", wf.ID)
+		return nil, vo.WrapError(errno.ErrChatFlowRoleOperationFail, fmt.Errorf("workflow %d is not a chat flow", wf.ID))
+	}
+
+	oldRole, err := GetWorkflowDomainSVC().GetChatFlowRole(ctx, mustParseInt64(role.WorkflowID), "")
+	if err != nil {
+		return nil, err
+	}
+
+	var roleID int64
+	if oldRole != nil {
+		role.ID = strconv.FormatInt(oldRole.ID, 10)
+		roleID = oldRole.ID
+	}
+
+	if role.GetID() == "" || role.GetID() == "0" {
+		chatFlowRole := &vo.ChatFlowRoleCreate{
+			WorkflowID: mustParseInt64(role.WorkflowID),
+			CreatorID:  uID,
+		}
+		if err = w.populateChatFlowRoleFields(role, chatFlowRole); err != nil {
+			return nil, err
+		}
+		roleID, err = GetWorkflowDomainSVC().CreateChatFlowRole(ctx, chatFlowRole)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		chatFlowRole := &vo.ChatFlowRoleUpdate{
+			WorkflowID: mustParseInt64(role.WorkflowID),
+		}
+
+		if err = w.populateChatFlowRoleFields(role, chatFlowRole); err != nil {
+			return nil, err
+		}
+
+		err = GetWorkflowDomainSVC().UpdateChatFlowRole(ctx, chatFlowRole.WorkflowID, chatFlowRole)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &workflow.CreateChatFlowRoleResponse{
+		ID: strconv.FormatInt(roleID, 10),
+	}, nil
+}
+
+func (w *ApplicationService) DeleteChatFlowRole(ctx context.Context, req *workflow.DeleteChatFlowRoleRequest) (
+	_ *workflow.DeleteChatFlowRoleResponse, err error) {
+	defer func() {
+		if panicErr := recover(); panicErr != nil {
+			err = safego.NewPanicErr(panicErr, debug.Stack())
+		}
+
+		if err != nil {
+			err = vo.WrapIfNeeded(errno.ErrChatFlowRoleOperationFail, err, errorx.KV("cause", vo.UnwrapRootErr(err).Error()))
+		}
+	}()
+
+	uID := ctxutil.MustGetUIDFromCtx(ctx)
+	wf, err := GetWorkflowDomainSVC().Get(ctx, &vo.GetPolicy{
+		ID:       mustParseInt64(req.GetWorkflowID()),
+		MetaOnly: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err = checkUserSpace(ctx, uID, wf.Meta.SpaceID); err != nil {
+		return nil, err
+	}
+
+	err = GetWorkflowDomainSVC().DeleteChatFlowRole(ctx, mustParseInt64(req.ID), mustParseInt64(req.WorkflowID))
+	if err != nil {
+		return nil, err
+	}
+
+	return &workflow.DeleteChatFlowRoleResponse{}, nil
+}
+
+func (w *ApplicationService) GetChatFlowRole(ctx context.Context, req *workflow.GetChatFlowRoleRequest) (
+	_ *workflow.GetChatFlowRoleResponse, err error) {
+	defer func() {
+		if panicErr := recover(); panicErr != nil {
+			err = safego.NewPanicErr(panicErr, debug.Stack())
+		}
+
+		if err != nil {
+			err = vo.WrapIfNeeded(errno.ErrChatFlowRoleOperationFail, err, errorx.KV("cause", vo.UnwrapRootErr(err).Error()))
+		}
+	}()
+
+	uID := ctxutil.MustGetUIDFromCtx(ctx)
+	wf, err := GetWorkflowDomainSVC().Get(ctx, &vo.GetPolicy{
+		ID:       mustParseInt64(req.GetWorkflowID()),
+		MetaOnly: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err = checkUserSpace(ctx, uID, wf.Meta.SpaceID); err != nil {
+		return nil, err
+	}
+
+	if !IsChatFlow(wf) {
+		logs.CtxWarnf(ctx, "GetChatFlowRole not chat flow, workflowID: %d", wf.ID)
+		return nil, vo.WrapError(errno.ErrChatFlowRoleOperationFail, fmt.Errorf("workflow %d is not a chat flow", wf.ID))
+	}
+
+	var version string
+	if wf.Meta.AppID != nil {
+		version = "" // TODO : search version from DB using AppID
+	}
+
+	role, err := GetWorkflowDomainSVC().GetChatFlowRole(ctx, mustParseInt64(req.WorkflowID), version)
+	if err != nil {
+		return nil, err
+	}
+
+	if role == nil {
+		logs.CtxWarnf(ctx, "GetChatFlowRole role nil, workflowID: %d", wf.ID)
+		// Return nil for the error to align with the production behavior,
+		// where the GET API may be called before the CREATE API during chatflow creation.
+		return &workflow.GetChatFlowRoleResponse{}, nil
+	}
+
+	wfRole, err := w.convertChatFlowRole(ctx, role)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chat flow role config, internal data processing error: %+v", err)
+	}
+
+	return &workflow.GetChatFlowRoleResponse{
+		Role: wfRole,
+	}, nil
+}
+
+func (w *ApplicationService) convertChatFlowRole(ctx context.Context, role *entity.ChatFlowRole) (*workflow.ChatFlowRole, error) {
+	var err error
+	res := &workflow.ChatFlowRole{
+		ID:          strconv.FormatInt(role.ID, 10),
+		WorkflowID:  strconv.FormatInt(role.WorkflowID, 10),
+		Name:        ptr.Of(role.Name),
+		Description: ptr.Of(role.Description),
+	}
+
+	if role.AvatarUri != "" {
+		url, err := w.ImageX.GetResourceURL(ctx, role.AvatarUri)
+		if err != nil {
+			return nil, err
+		}
+		res.Avatar = &workflow.AvatarConfig{
+			ImageUri: role.AvatarUri,
+			ImageUrl: url.URL,
+		}
+	}
+
+	if role.AudioConfig != "" {
+		err = sonic.UnmarshalString(role.AudioConfig, &res.AudioConfig)
+		if err != nil {
+			logs.CtxErrorf(ctx, "GetChatFlowRole AudioConfig UnmarshalString err: %+v", err)
+			return nil, vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+
+	if role.OnboardingInfo != "" {
+		err = sonic.UnmarshalString(role.OnboardingInfo, &res.OnboardingInfo)
+		if err != nil {
+			logs.CtxErrorf(ctx, "GetChatFlowRole OnboardingInfo UnmarshalString err: %+v", err)
+			return nil, vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+
+	if role.SuggestReplyInfo != "" {
+		err = sonic.UnmarshalString(role.SuggestReplyInfo, &res.SuggestReplyInfo)
+		if err != nil {
+			logs.CtxErrorf(ctx, "GetChatFlowRole SuggestReplyInfo UnmarshalString err: %+v", err)
+			return nil, vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+
+	if role.UserInputConfig != "" {
+		err = sonic.UnmarshalString(role.UserInputConfig, &res.UserInputConfig)
+		if err != nil {
+			logs.CtxErrorf(ctx, "GetChatFlowRole UserInputConfig UnmarshalString err: %+v", err)
+			return nil, vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+	}
+
+	if role.BackgroundImageInfo != "" {
+		res.BackgroundImageInfo = &workflow.BackgroundImageInfo{}
+		err = sonic.UnmarshalString(role.BackgroundImageInfo, res.BackgroundImageInfo)
+		if err != nil {
+			logs.CtxErrorf(ctx, "GetChatFlowRole BackgroundImageInfo UnmarshalString err: %+v", err)
+			return nil, vo.WrapError(errno.ErrSerializationDeserializationFail, err)
+		}
+		if res.BackgroundImageInfo != nil {
+			if res.BackgroundImageInfo.WebBackgroundImage != nil && res.BackgroundImageInfo.WebBackgroundImage.OriginImageUri != nil {
+				url, err := w.ImageX.GetResourceURL(ctx, res.BackgroundImageInfo.WebBackgroundImage.GetOriginImageUri())
+				if err != nil {
+					logs.CtxErrorf(ctx, "get url by uri err, err:%s", err.Error())
+					return nil, err
+				}
+				res.BackgroundImageInfo.WebBackgroundImage.ImageUrl = &url.URL
+			}
+
+			if res.BackgroundImageInfo.MobileBackgroundImage != nil && res.BackgroundImageInfo.MobileBackgroundImage.OriginImageUri != nil {
+				url, err := w.ImageX.GetResourceURL(ctx, res.BackgroundImageInfo.MobileBackgroundImage.GetOriginImageUri())
+				if err != nil {
+					logs.CtxErrorf(ctx, "get url by uri err, err:%s", err.Error())
+					return nil, err
+				}
+				res.BackgroundImageInfo.MobileBackgroundImage.ImageUrl = &url.URL
+			}
+		}
+	}
+
+	return res, nil
 }

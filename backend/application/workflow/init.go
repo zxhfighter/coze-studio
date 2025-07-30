@@ -21,6 +21,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	wfconversation "github.com/coze-dev/coze-studio/backend/crossdomain/workflow/conversation"
 	wfdatabase "github.com/coze-dev/coze-studio/backend/crossdomain/workflow/database"
 	wfknowledge "github.com/coze-dev/coze-studio/backend/crossdomain/workflow/knowledge"
 	wfmodel "github.com/coze-dev/coze-studio/backend/crossdomain/workflow/model"
@@ -34,6 +35,7 @@ import (
 	search "github.com/coze-dev/coze-studio/backend/domain/search/service"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	crosscode "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/code"
+	crossconversation "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	crossdatabase "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/database"
 	crossknowledge "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/knowledge"
 	crossmodel "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/model"
@@ -78,6 +80,7 @@ func InitService(components *ServiceComponents) *ApplicationService {
 	crossmodel.SetManager(wfmodel.NewModelManager(components.ModelManager, nil))
 	crosscode.SetCodeRunner(components.CodeRunner)
 	crosssearch.SetNotifier(wfsearch.NewNotify(components.DomainNotifier))
+	crossconversation.SetConversationManager(wfconversation.NewConversationRepository())
 
 	SVC.DomainSVC = workflowDomainSVC
 	SVC.ImageX = components.ImageX

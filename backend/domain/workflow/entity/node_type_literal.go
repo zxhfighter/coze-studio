@@ -17,6 +17,8 @@
 package entity
 
 import (
+	"fmt"
+
 	"github.com/coze-dev/coze-studio/backend/pkg/i18n"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 )
@@ -481,7 +483,6 @@ var NodeTypeMetas = []*NodeTypeMeta{
 		Color:        "#F2B600",
 		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Conversation-List.jpeg",
 		SupportBatch: false, // supportBatch: 1
-		Disabled:     true,
 		ExecutableMeta: ExecutableMeta{
 			PreFillZero:        true,
 			PostFillNil:        true,
@@ -492,14 +493,13 @@ var NodeTypeMetas = []*NodeTypeMeta{
 	},
 	{
 		ID:           38,
-		Name:         "清除上下文",
-		Type:         NodeTypeClearMessage,
+		Name:         "清空会话历史",
+		Type:         NodeTypeClearConversationHistory,
 		Category:     "conversation_history", // Mapped from cate_list
 		Desc:         "用于清空会话历史，清空后LLM看到的会话历史为空",
 		Color:        "#F2B600",
 		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Conversation-Delete.jpeg",
 		SupportBatch: false, // supportBatch: 1
-		Disabled:     true,
 		ExecutableMeta: ExecutableMeta{
 			PreFillZero:        true,
 			PostFillNil:        true,
@@ -508,6 +508,25 @@ var NodeTypeMetas = []*NodeTypeMeta{
 		EnUSName:        "Clear conversation history",
 		EnUSDescription: "Used to clear conversation history. After clearing, the conversation history visible to the LLM node will be empty.",
 	},
+
+	{
+		ID:           54,
+		Name:         "查询会话历史",
+		Type:         NodeTypeConversationHistory,
+		Category:     "conversation_history", // Mapped from cate_list
+		Desc:         "用于查询会话历史，返回LLM可见的会话消息",
+		Color:        "#F2B600",
+		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-查询会话历史.jpg",
+		SupportBatch: false,
+		ExecutableMeta: ExecutableMeta{
+			PreFillZero:        true,
+			PostFillNil:        true,
+			StreamingParadigms: map[StreamingParadigm]bool{Invoke: true},
+		},
+		EnUSName:        "Query Conversation History",
+		EnUSDescription: "Used to query conversation history, returns conversation messages visible to the LLM",
+	},
+
 	{
 		ID:           39,
 		Name:         "创建会话",
@@ -517,15 +536,51 @@ var NodeTypeMetas = []*NodeTypeMeta{
 		Color:        "#F2B600",
 		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Conversation-Create.jpeg",
 		SupportBatch: false, // supportBatch: 1
-		Disabled:     true,
 		ExecutableMeta: ExecutableMeta{
 			PreFillZero:        true,
 			PostFillNil:        true,
 			StreamingParadigms: map[StreamingParadigm]bool{Invoke: true},
 		},
-		EnUSName:        "Create conversation",
+		EnUSName:        "Create Conversation",
 		EnUSDescription: "This node is used to create a conversation.",
 	},
+
+	{
+		ID:           51,
+		Name:         "修改会话",
+		Type:         NodeTypeConversationUpdate,
+		Category:     "conversation_management", // Mapped from cate_list
+		Desc:         "用于修改会话的名字",
+		Color:        "#F2B600",
+		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-编辑会话.jpg",
+		SupportBatch: false,
+		ExecutableMeta: ExecutableMeta{
+			PreFillZero:        true,
+			PostFillNil:        true,
+			StreamingParadigms: map[StreamingParadigm]bool{Invoke: true},
+		},
+		EnUSName:        "Edit Conversation",
+		EnUSDescription: "Used to modify the name of a conversation.",
+	},
+
+	{
+		ID:           52,
+		Name:         "删除会话",
+		Type:         NodeTypeConversationDelete,
+		Category:     "conversation_management", // Mapped from cate_list
+		Desc:         "用于删除会话",
+		Color:        "#F2B600",
+		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-删除会话.jpg",
+		SupportBatch: false,
+		ExecutableMeta: ExecutableMeta{
+			PreFillZero:        true,
+			PostFillNil:        true,
+			StreamingParadigms: map[StreamingParadigm]bool{Invoke: true},
+		},
+		EnUSName:        "Delete Conversation",
+		EnUSDescription: "Used to delete a conversation.",
+	},
+
 	{
 		ID:           40,
 		Name:         "变量赋值",
@@ -633,12 +688,82 @@ var NodeTypeMetas = []*NodeTypeMeta{
 		EnUSDescription: "Add new data records to the table, and insert them into the database after the user enters the data content",
 	},
 	{
+		ID:           53,
+		Name:         "查询会话列表",
+		Type:         NodeTypeConversationList,
+		Category:     "conversation_management",
+		Desc:         "用于查询所有会话，包含静态会话、动态会话",
+		Color:        "#F2B600",
+		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-查询会话.jpg",
+		SupportBatch: false,
+		ExecutableMeta: ExecutableMeta{
+			PostFillNil:        true,
+			StreamingParadigms: map[StreamingParadigm]bool{Invoke: true},
+		},
+		EnUSName:        "Query Conversation List",
+		EnUSDescription: "Used to query all conversations, including static conversations and dynamic conversations",
+	},
+	{
+		ID:           55,
+		Name:         "创建消息",
+		Type:         NodeTypeCreateMessage,
+		Category:     "message",
+		Desc:         "用于创建消息",
+		Color:        "#F2B600",
+		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-创建消息.jpg",
+		SupportBatch: false, // supportBatch: 1
+		ExecutableMeta: ExecutableMeta{
+			PreFillZero:        true,
+			PostFillNil:        true,
+			StreamingParadigms: map[StreamingParadigm]bool{Invoke: true},
+		},
+		EnUSName:        "Create message",
+		EnUSDescription: "Used to create messages",
+	},
+
+	{
+		ID:           56,
+		Name:         "修改消息",
+		Type:         NodeTypeEditMessage,
+		Category:     "message",
+		Desc:         "用于修改消息",
+		Color:        "#F2B600",
+		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-修改消息.jpg",
+		SupportBatch: false, // supportBatch: 1
+		ExecutableMeta: ExecutableMeta{
+			PreFillZero:        true,
+			PostFillNil:        true,
+			StreamingParadigms: map[StreamingParadigm]bool{Invoke: true},
+		},
+		EnUSName:        "Edit message",
+		EnUSDescription: "Used to edit messages",
+	},
+
+	{
+		ID:           57,
+		Name:         "删除消息",
+		Type:         NodeTypeDeleteMessage,
+		Category:     "message",
+		Desc:         "用于删除消息",
+		Color:        "#F2B600",
+		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-删除消息.jpg",
+		SupportBatch: false, // supportBatch: 1
+		ExecutableMeta: ExecutableMeta{
+			PreFillZero:        true,
+			PostFillNil:        true,
+			StreamingParadigms: map[StreamingParadigm]bool{Invoke: true},
+		},
+		EnUSName:        "Delete message",
+		EnUSDescription: "Used to delete messages",
+	},
+
+	{
 		ID:           58,
 		Name:         "JSON 序列化",
 		Type:         NodeTypeJsonSerialization,
 		Category:     "utilities",
 		Desc:         "用于把变量转化为JSON字符串",
-		Color:        "F2B600",
+		Color:        "#F2B600",
 		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-to_json.png",
 		SupportBatch: false,
 		ExecutableMeta: ExecutableMeta{
@@ -656,7 +781,7 @@ var NodeTypeMetas = []*NodeTypeMeta{
 		Type:         NodeTypeJsonDeserialization,
 		Category:     "utilities",
 		Desc:         "用于将JSON字符串解析为变量",
-		Color:        "F2B600",
+		Color:        "#F2B600",
 		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-from_json.png",
 		SupportBatch: false,
 		ExecutableMeta: ExecutableMeta{
@@ -862,6 +987,133 @@ const defaultEnUSInitCanvasJsonSchema = `{
  }
 }`
 
+const defaultZhCNInitCanvasJsonSchemaChat = `{
+	"nodes": [{
+		"id": "100001",
+		"type": "1",
+		"meta": {
+			"position": {
+				"x": 0,
+				"y": 0
+			}
+		},
+		"data": {
+			"outputs": [{
+				"type": "string",
+				"name": "USER_INPUT",
+				"required": true
+			}, {
+				"type": "string",
+				"name": "CONVERSATION_NAME",
+				"required": false,
+				"description": "本次请求绑定的会话，会自动写入消息、会从该会话读对话历史。",
+				"defaultValue": "%s"
+			}],
+			"nodeMeta": {
+				"title": "开始",
+				"icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Start.png",
+				"description": "工作流的起始节点，用于设定启动工作流需要的信息",
+				"subTitle": ""
+			}
+		}
+	}, {
+		"id": "900001",
+		"type": "2",
+		"meta": {
+			"position": {
+				"x": 1000,
+				"y": 0
+			}
+		},
+		"data": {
+			"nodeMeta": {
+				"title": "结束",
+				"icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-End.png",
+				"description": "工作流的最终节点，用于返回工作流运行后的结果信息",
+				"subTitle": ""
+			},
+			"inputs": {
+				"terminatePlan": "useAnswerContent",
+				"streamingOutput": true,
+				"inputParameters": [{
+					"name": "output",
+					"input": {
+						"type": "string",
+						"value": {
+							"type": "ref"
+						}
+					}
+				}]
+			}
+		}
+	}]
+}`
+const defaultEnUSInitCanvasJsonSchemaChat = `{
+	"nodes": [{
+		"id": "100001",
+		"type": "1",
+		"meta": {
+			"position": {
+				"x": 0,
+				"y": 0
+			}
+		},
+		"data": {
+			"outputs": [{
+				"type": "string",
+				"name": "USER_INPUT",
+				"required": true
+			}, {
+				"type": "string",
+				"name": "CONVERSATION_NAME",
+				"required": false,
+				"description": "The conversation bound to this request will automatically write messages and read conversation history from that conversation.",
+				"defaultValue": "%s"
+			}],
+			"nodeMeta": {
+				"title": "Start",
+				"icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Start.png",
+				"description": "The starting node of the workflow, used to set the information needed to initiate the workflow.",
+				"subTitle": ""
+			}
+		}
+	}, {
+		"id": "900001",
+		"type": "2",
+		"meta": {
+			"position": {
+				"x": 1000,
+				"y": 0
+			}
+		},
+		"data": {
+			"nodeMeta": {
+				"title": "End",
+				"icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-End.png",
+				"description": "The final node of the workflow, used to return the result information after the workflow runs.",
+				"subTitle": ""
+			},
+			"inputs": {
+				"terminatePlan": "useAnswerContent",
+				"streamingOutput": true,
+				"inputParameters": [{
+					"name": "output",
+					"input": {
+						"type": "string",
+						"value": {
+							"type": "ref"
+						}
+					}
+				}]
+			}
+		}
+	}]
+}`
+
 func GetDefaultInitCanvasJsonSchema(locale i18n.Locale) string {
 	return ternary.IFElse(locale == i18n.LocaleEN, defaultEnUSInitCanvasJsonSchema, defaultZhCNInitCanvasJsonSchema)
+}
+
+func GetDefaultInitCanvasJsonSchemaChat(locale i18n.Locale, name string) string {
+	return ternary.IFElse(locale == i18n.LocaleEN, fmt.Sprintf(defaultEnUSInitCanvasJsonSchemaChat, name), fmt.Sprintf(defaultZhCNInitCanvasJsonSchemaChat, name))
 }

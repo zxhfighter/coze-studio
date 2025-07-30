@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"runtime/debug"
 	"strconv"
 	"time"
@@ -502,6 +503,7 @@ func (s *NodeSchema) ToDatabaseCustomSQLConfig() (*database.CustomSQLConfig, err
 		OutputConfig:      s.OutputTypes,
 		CustomSQLExecutor: crossdatabase.GetDatabaseOperator(),
 	}, nil
+
 }
 
 func (s *NodeSchema) ToDatabaseQueryConfig() (*database.QueryConfig, error) {
@@ -517,6 +519,7 @@ func (s *NodeSchema) ToDatabaseQueryConfig() (*database.QueryConfig, error) {
 }
 
 func (s *NodeSchema) ToDatabaseInsertConfig() (*database.InsertConfig, error) {
+
 	return &database.InsertConfig{
 		DatabaseInfoID: mustGetKey[int64]("DatabaseInfoID", s.Configs),
 		OutputConfig:   s.OutputTypes,
@@ -534,6 +537,7 @@ func (s *NodeSchema) ToDatabaseDeleteConfig() (*database.DeleteConfig, error) {
 }
 
 func (s *NodeSchema) ToDatabaseUpdateConfig() (*database.UpdateConfig, error) {
+
 	return &database.UpdateConfig{
 		DatabaseInfoID: mustGetKey[int64]("DatabaseInfoID", s.Configs),
 		ClauseGroup:    mustGetKey[*crossdatabase.ClauseGroup]("ClauseGroup", s.Configs),
@@ -573,6 +577,7 @@ func (s *NodeSchema) ToPluginConfig() (*plugin.Config, error) {
 		PluginVersion: mustGetKey[string]("PluginVersion", s.Configs),
 		PluginService: crossplugin.GetPluginService(),
 	}, nil
+
 }
 
 func (s *NodeSchema) ToCodeRunnerConfig() (*code.Config, error) {
@@ -586,19 +591,42 @@ func (s *NodeSchema) ToCodeRunnerConfig() (*code.Config, error) {
 
 func (s *NodeSchema) ToCreateConversationConfig() (*conversation.CreateConversationConfig, error) {
 	return &conversation.CreateConversationConfig{
-		Creator: crossconversation.ConversationManagerImpl,
+		Manager: crossconversation.GetConversationManager(),
 	}, nil
 }
 
-func (s *NodeSchema) ToClearMessageConfig() (*conversation.ClearMessageConfig, error) {
-	return &conversation.ClearMessageConfig{
-		Clearer: crossconversation.ConversationManagerImpl,
+func (s *NodeSchema) ToDeleteMessageConfig() (*conversation.DeleteMessageConfig, error) {
+	return &conversation.DeleteMessageConfig{
+		Manager: crossconversation.GetConversationManager(),
+	}, nil
+}
+func (s *NodeSchema) ToEditMessageConfig() (*conversation.EditMessageConfig, error) {
+	return &conversation.EditMessageConfig{
+		Manager: crossconversation.GetConversationManager(),
+	}, nil
+}
+
+func (s *NodeSchema) ToCreateMessageConfig() (*conversation.CreateMessageConfig, error) {
+	return &conversation.CreateMessageConfig{
+		Creator: crossconversation.GetConversationManager(),
 	}, nil
 }
 
 func (s *NodeSchema) ToMessageListConfig() (*conversation.MessageListConfig, error) {
 	return &conversation.MessageListConfig{
-		Lister: crossconversation.ConversationManagerImpl,
+		Lister: crossconversation.GetConversationManager(),
+	}, nil
+}
+
+func (s *NodeSchema) ToClearConversationHistoryConfig() (*conversation.ClearConversationHistoryConfig, error) {
+	return &conversation.ClearConversationHistoryConfig{
+		Manager: crossconversation.GetConversationManager(),
+	}, nil
+}
+
+func (s *NodeSchema) ToConversationHistoryConfig() (*conversation.ConversationHistoryConfig, error) {
+	return &conversation.ConversationHistoryConfig{
+		Manager: crossconversation.GetConversationManager(),
 	}, nil
 }
 

@@ -137,7 +137,10 @@ enum NodeType{
     Input           = 30,
     Batch           = 28,
     Continue        = 29,
+    MessageList     = 37,
     AssignVariable  = 40,
+    ConversationList = 53,
+    CreateMessage   = 55,
     JsonSerialization   = 58,
     JsonDeserialization = 59,
     DatasetDelete       = 60,
@@ -172,11 +175,14 @@ enum NodeTemplateType{
     Input           = 30,
     Batch           = 28,
     Continue        = 29,
+    MessageList     = 37,
     AssignVariable  = 40,
     DatabaseInsert = 41,
     DatabaseUpdate = 42,
     DatabasesELECT = 43,
     DatabaseDelete = 44,
+    ConversationList = 53,
+    CreateMessage   = 55,
     JsonSerialization   = 58,
     JsonDeserialization = 59,
     DatasetDelete       = 60,
@@ -1780,45 +1786,46 @@ struct BackgroundImageDetail {
 }
 
 struct BackgroundImageInfo {
-    1: optional BackgroundImageDetail WebBackgroundImage   (agw.key="web_background_image",go.tag = "json:\"web_background_image\"")                             , // web端背景图
-    2: optional BackgroundImageDetail MobileBackgroundImage    (agw.key="mobile_background_image"go.tag = "json:\"mobile_background_image\"")                             , // 移动端背景图
+    1: optional BackgroundImageDetail WebBackgroundImage   (agw.key="web_background_image", go.tag = "json:\"web_background_image\"")                             , // web端背景图
+    2: optional BackgroundImageDetail MobileBackgroundImage    (agw.key="mobile_background_image", go.tag = "json:\"mobile_background_image\"")                             , // 移动端背景图
 }
 
 struct AvatarConfig{
     1: string ImageUri (agw.key="image_uri", go.tag = "json:\"image_uri\"")
-    2: string ImageUrl (agw.key="image_url",go.tag = "json:\"image_url\"")
+    2: string ImageUrl (agw.key="image_url", go.tag = "json:\"image_url\"")
 }
 
 struct ChatFlowRole{
-    1: string ID (agw.key = "id",go.tag = "json:\"id\"")
-    2: string WorkflowID (agw.key = "workflow_id",go.tag = "json:\"workflow_id\"")
-    3: string ConnectorID  (agw.key="connector_id",go.tag = "json:\"connector_id\"") // 渠道ID
-    4: optional AvatarConfig Avatar (agw.key="avatar",go.tag = "json:\"avatar\"") // 角色头像
-    5: optional string Description (agw.key="description",go.tag = "json:\"description\"")// 角色描述
-    6: optional OnboardingInfo OnboardingInfo (agw.key="onboarding_info",go.tag = "json:\"onboarding_info\"")// 开场白
-    7: optional string Name (agw.key="name",go.tag = "json:\"name\"") // 角色名称
-    8: optional SuggestReplyInfo SuggestReplyInfo (agw.key="suggest_reply_info",go.tag = "json:\"suggest_reply_info\"")// 用户问题建议
-    9: optional BackgroundImageInfo BackgroundImageInfo (agw.key="background_image_info",go.tag = "json:\"background_image_info\"")// 背景图
-    10: optional AudioConfig AudioConfig (agw.key="audio_config",go.tag = "json:\"audio_config\"")// 语音配置：音色、电话等
-    11: optional UserInputConfig UserInputConfig (agw.key="user_input_config",go.tag = "json:\"user_input_config\"") // 用户输入方式
-    12: optional string ProjectVersion (agw.key="project_version",go.tag = "json:\"project_version\"") // 项目版本
+    1: string ID (agw.key = "id", go.tag = "json:\"id\"")
+    2: string WorkflowID (agw.key = "workflow_id", go.tag = "json:\"workflow_id\"")
+    3: string ConnectorID  (agw.key="connector_id", go.tag = "json:\"connector_id\"") // 渠道ID
+    4: optional AvatarConfig Avatar (agw.key="avatar", go.tag = "json:\"avatar\"") // 角色头像
+    5: optional string Description (agw.key="description", go.tag = "json:\"description\"")// 角色描述
+    6: optional OnboardingInfo OnboardingInfo (agw.key="onboarding_info", go.tag = "json:\"onboarding_info\"")// 开场白
+    7: optional string Name (agw.key="name", go.tag = "json:\"name\"") // 角色名称
+    8: optional SuggestReplyInfo SuggestReplyInfo (agw.key="suggest_reply_info", go.tag = "json:\"suggest_reply_info\"")// 用户问题建议
+    9: optional BackgroundImageInfo BackgroundImageInfo (agw.key="background_image_info", go.tag = "json:\"background_image_info\"")// 背景图
+    10: optional AudioConfig AudioConfig (agw.key="audio_config", go.tag = "json:\"audio_config\"")// 语音配置：音色、电话等
+    11: optional UserInputConfig UserInputConfig (agw.key="user_input_config", go.tag = "json:\"user_input_config\"") // 用户输入方式
+    12: optional string ProjectVersion (agw.key="project_version", go.tag = "json:\"project_version\"") // 项目版本
 }
 
 struct CreateChatFlowRoleRequest{
-	1: ChatFlowRole ChatFlowRole(agw.key= "chat_flow_role",go.tag="json:\"chat_flow_role\"")
+	1: ChatFlowRole ChatFlowRole(agw.key= "chat_flow_role", go.tag="json:\"chat_flow_role\"", api.query = "chat_flow_role")
     255: optional base.Base Base
 }
 
 struct CreateChatFlowRoleResponse{
-    1: string ID // 数据库中ID
-
+    1: string ID (agw.key = "id", go.tag = "json:\"id\"", api.query = "id") // 数据库中ID
+    253: required i64 code
+    254: required string msg
     255: required base.BaseResp BaseResp
 }
 
 struct DeleteChatFlowRoleRequest{
-	1: string WorkflowID
-    2: string ConnectorID
-    4: string ID // 数据库中ID
+	1: string WorkflowID (agw.key = "workflow_id", go.tag = "json:\"workflow_id\"", api.query = "workflow_id")
+    2: string ConnectorID (agw.key = "connector_id", go.tag = "json:\"connector_id\"", api.query = "connector_id")
+    4: string ID (agw.key = "id", go.tag = "json:\"id\"", api.query = "id") // 数据库中ID
 
     255: optional base.Base Base
 }
@@ -1829,18 +1836,20 @@ struct DeleteChatFlowRoleResponse{
 }
 
 struct GetChatFlowRoleRequest{
-	1: string WorkflowID (agw.key = "workflow_id")
-    2: string ConnectorID (agw.key = "connector_id")
-    3: bool IsDebug (agw.key = "is_debug")
+	1: string WorkflowID (agw.key = "workflow_id", go.tag = "json:\"workflow_id\"", api.query = "workflow_id")
+    2: string ConnectorID (agw.key = "connector_id", go.tag = "json:\"connector_id\"", api.query = "connector_id")
+    3: bool IsDebug (agw.key = "is_debug", go.tag = "json:\"is_debug\"", api.query = "is_debug")
 //    4: optional string AppID (api.query = "app_id")
     5: optional map<string,string> Ext (api.query = "ext")
-    255: optional base.Base Base
+    255: optional base.Base Base (go.tag = "json:\"base\"", api.query = "base")
 }
 
 struct GetChatFlowRoleResponse{
-	1  : optional ChatFlowRole Role (agw.key = "role")
+    1: required i64 code
+    2: required string msg
+	3: optional ChatFlowRole Role (agw.key = "role", go.tag = "json:\"role\"", api.query = "role")
 
-    255: required base.BaseResp BaseResp
+    255: required base.BaseResp BaseResp (go.tag = "json:\"base_resp\"", api.query = "base_resp")
 }
 
 enum NodePanelSearchType {

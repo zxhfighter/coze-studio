@@ -52,6 +52,7 @@ type impl struct {
 	repo workflow.Repository
 	*asToolImpl
 	*executableImpl
+	*conversationImpl
 }
 
 func NewWorkflowService(repo workflow.Repository) workflow.Service {
@@ -63,6 +64,7 @@ func NewWorkflowService(repo workflow.Repository) workflow.Service {
 		executableImpl: &executableImpl{
 			repo: repo,
 		},
+		conversationImpl: &conversationImpl{repo: repo},
 	}
 }
 
@@ -429,7 +431,7 @@ func (i *impl) collectNodePropertyMap(ctx context.Context, canvas *vo.Canvas) (m
 			if err != nil {
 				return nil, err
 			}
-			blockType, err := entityNodeTypeToBlockType(nodeSchema.Type)
+			blockType, err := entity.NodeTypeToBlockType(nodeSchema.Type)
 			if err != nil {
 				return nil, err
 			}
@@ -481,7 +483,7 @@ func (i *impl) collectNodePropertyMap(ctx context.Context, canvas *vo.Canvas) (m
 				return nil, err
 			}
 			for _, nodeSchema := range nodeSchemas {
-				blockType, err := entityNodeTypeToBlockType(nodeSchema.Type)
+				blockType, err := entity.NodeTypeToBlockType(nodeSchema.Type)
 				if err != nil {
 					return nil, err
 				}
@@ -496,6 +498,142 @@ func (i *impl) collectNodePropertyMap(ctx context.Context, canvas *vo.Canvas) (m
 		}
 	}
 	return nodePropertyMap, nil
+}
+
+func (i *impl) CreateChatFlowRole(ctx context.Context, role *vo.ChatFlowRoleCreate) (int64, error) {
+	id, err := i.repo.CreateChatFlowRoleConfig(ctx, &entity.ChatFlowRole{
+		Name:                role.Name,
+		Description:         role.Description,
+		WorkflowID:          role.WorkflowID,
+		CreatorID:           role.CreatorID,
+		AudioConfig:         role.AudioConfig,
+		UserInputConfig:     role.UserInputConfig,
+		AvatarUri:           role.AvatarUri,
+		BackgroundImageInfo: role.BackgroundImageInfo,
+		OnboardingInfo:      role.OnboardingInfo,
+		SuggestReplyInfo:    role.SuggestReplyInfo,
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
+func (i *impl) UpdateChatFlowRole(ctx context.Context, workflowID int64, role *vo.ChatFlowRoleUpdate) error {
+	err := i.repo.UpdateChatFlowRoleConfig(ctx, workflowID, role)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *impl) GetChatFlowRole(ctx context.Context, workflowID int64, version string) (*entity.ChatFlowRole, error) {
+	role, err, isExist := i.repo.GetChatFlowRoleConfig(ctx, workflowID, version)
+	if !isExist {
+		logs.CtxWarnf(ctx, "chat flow role not exist, workflow id %v, version %v", workflowID, version)
+		// Return (nil, nil) on 'NotExist' to align with the production behavior,
+		// where the GET API may be called before the CREATE API during chatflow creation.
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return role, nil
+}
+
+func (i *impl) DeleteChatFlowRole(ctx context.Context, id int64, workflowID int64) error {
+	return i.repo.DeleteChatFlowRoleConfig(ctx, id, workflowID)
+}
+
+func (i *impl) CopyChatFlowRole(ctx context.Context, policy *vo.CopyRolePolicy) error {
+	if policy.SourceID == 0 || policy.TargetID == 0 || policy.CreatorID == 0 {
+		logs.CtxErrorf(ctx, "invalid copy role policy, source id %v, target id %v, creator id %v should not be zero", policy.SourceID, policy.TargetID, policy.CreatorID)
+		return vo.WrapError(errno.ErrInvalidParameter, fmt.Errorf("invalid copy role policy, source id %v, target id %v, creator id %v should not be zero", policy.SourceID, policy.TargetID, policy.CreatorID))
+	}
+	wf, err := i.repo.GetEntity(ctx, &vo.GetPolicy{
+		ID:       policy.SourceID,
+		MetaOnly: true,
+	})
+	if err != nil {
+		return err
+	}
+	if wf.Mode != cloudworkflow.WorkflowMode_ChatFlow {
+		return vo.WrapError(errno.ErrChatFlowRoleOperationFail, fmt.Errorf("workflow id %v, mode %v is not a chatflow", policy.SourceID, wf.Mode))
+	}
+	role, err, isExist := i.repo.GetChatFlowRoleConfig(ctx, policy.SourceID, "")
+	if !isExist {
+		logs.CtxErrorf(ctx, "get draft chat flow role nil, workflow id %v", policy.SourceID)
+		return vo.WrapError(errno.ErrChatFlowRoleOperationFail, fmt.Errorf("get draft chat flow role nil, workflow id %v", policy.SourceID))
+	}
+	if err != nil {
+		return vo.WrapIfNeeded(errno.ErrChatFlowRoleOperationFail, err)
+	}
+
+	_, err = i.repo.CreateChatFlowRoleConfig(ctx, &entity.ChatFlowRole{
+		Name:                role.Name,
+		Description:         role.Description,
+		WorkflowID:          policy.TargetID,
+		CreatorID:           policy.CreatorID,
+		AudioConfig:         role.AudioConfig,
+		UserInputConfig:     role.UserInputConfig,
+		AvatarUri:           role.AvatarUri,
+		BackgroundImageInfo: role.BackgroundImageInfo,
+		OnboardingInfo:      role.OnboardingInfo,
+		SuggestReplyInfo:    role.SuggestReplyInfo,
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i *impl) PublishChatFlowRole(ctx context.Context, policy *vo.PublishRolePolicy) error {
+	if policy.WorkflowID == 0 || policy.CreatorID == 0 || policy.Version == "" {
+		logs.CtxErrorf(ctx, "invalid publish role policy, workflow id %v, creator id %v should not be zero, version %v should not be empty", policy.WorkflowID, policy.CreatorID, policy.Version)
+		return vo.WrapError(errno.ErrInvalidParameter, fmt.Errorf("invalid publish role policy, workflow id %v, creator id %v should not be zero, version %v should not be empty", policy.WorkflowID, policy.CreatorID, policy.Version))
+	}
+	wf, err := i.repo.GetEntity(ctx, &vo.GetPolicy{
+		ID:       policy.WorkflowID,
+		MetaOnly: true,
+	})
+	if err != nil {
+		return err
+	}
+	if wf.Mode != cloudworkflow.WorkflowMode_ChatFlow {
+		return vo.WrapError(errno.ErrChatFlowRoleOperationFail, fmt.Errorf("workflow id %v, mode %v is not a chatflow", policy.WorkflowID, wf.Mode))
+	}
+	role, err, isExist := i.repo.GetChatFlowRoleConfig(ctx, policy.WorkflowID, "")
+	if !isExist {
+		logs.CtxErrorf(ctx, "get draft chat flow role nil, workflow id %v", policy.WorkflowID)
+		return vo.WrapError(errno.ErrChatFlowRoleOperationFail, fmt.Errorf("get draft chat flow role nil, workflow id %v", policy.WorkflowID))
+	}
+	if err != nil {
+		return vo.WrapIfNeeded(errno.ErrChatFlowRoleOperationFail, err)
+	}
+
+	_, err = i.repo.CreateChatFlowRoleConfig(ctx, &entity.ChatFlowRole{
+		Name:                role.Name,
+		Description:         role.Description,
+		WorkflowID:          policy.WorkflowID,
+		CreatorID:           policy.CreatorID,
+		AudioConfig:         role.AudioConfig,
+		UserInputConfig:     role.UserInputConfig,
+		AvatarUri:           role.AvatarUri,
+		BackgroundImageInfo: role.BackgroundImageInfo,
+		OnboardingInfo:      role.OnboardingInfo,
+		SuggestReplyInfo:    role.SuggestReplyInfo,
+		Version:             policy.Version,
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func canvasToRefs(referringID int64, canvasStr string) (map[entity.WorkflowReferenceKey]struct{}, error) {
@@ -777,6 +915,11 @@ func (i *impl) ReleaseApplicationWorkflows(ctx context.Context, appID int64, con
 		if err = i.repo.CreateVersion(ctx, id, vInfo, wfRefs); err != nil {
 			return nil, err
 		}
+	}
+
+	err = i.ReleaseConversationTemplate(ctx, appID, config.Version)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, connectorID := range config.ConnectorIDs {
