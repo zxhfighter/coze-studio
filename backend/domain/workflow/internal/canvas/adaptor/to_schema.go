@@ -440,6 +440,10 @@ func toIntentDetectorSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema, err
 		ns.SetConfigKV("IsFastMode", true)
 	}
 
+	if n.Data.Inputs.ChatHistorySetting != nil {
+		ns.SetConfigKV("ChatHistorySetting", n.Data.Inputs.ChatHistorySetting)
+	}
+
 	if err = SetInputsForNodeSchema(n, ns); err != nil {
 		return nil, err
 	}
@@ -836,6 +840,10 @@ func toKnowledgeRetrieverSchema(n *vo.Node, _ ...OptionFn) (*compose.NodeSchema,
 		knowledgeIDs = append(knowledgeIDs, k)
 	}
 	ns.SetConfigKV("KnowledgeIDs", knowledgeIDs)
+
+	if n.Data.Inputs.ChatHistorySetting != nil {
+		ns.SetConfigKV("ChatHistorySetting", n.Data.Inputs.ChatHistorySetting)
+	}
 
 	retrievalStrategy := &knowledge.RetrievalStrategy{}
 
