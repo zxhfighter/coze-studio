@@ -73,4 +73,5 @@ func staticFileRegister(r *server.Hertz) {
 		// index page will show 404 error
 		ctx.File(staticFile)
 	})
+
 }
