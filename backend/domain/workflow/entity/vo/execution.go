@@ -37,6 +37,7 @@ type ExecuteConfig struct {
 	WorkflowMode   WorkflowMode
 	RoundID        *int64 // if workflow is chat flow, conversation round id is required
 	ConversationID *int64 // if workflow is chat flow, conversation id is required
+	EnterMessage   *workflow.EnterMessage
 }
 
 type ExecuteMode string

@@ -394,6 +394,10 @@ func Register(r *server.Hertz) {
 				_chat_flow_role.GET("/get", append(_getchatflowroleMw(), coze.GetChatFlowRole)...)
 			}
 			{
+				_conversation0 := _workflow_api.Group("/conversation", _conversation0Mw()...)
+				_conversation0.POST("/create", append(_getorcreateconversationMw(), coze.GetOrCreateConversation)...)
+			}
+			{
 				_project_conversation := _workflow_api.Group("/project_conversation", _project_conversationMw()...)
 				_project_conversation.POST("/create", append(_createprojectconversationdefMw(), coze.CreateProjectConversationDef)...)
 				_project_conversation.POST("/delete", append(_deleteprojectconversationdefMw(), coze.DeleteProjectConversationDef)...)
@@ -414,10 +418,10 @@ func Register(r *server.Hertz) {
 			_bot0.GET("/get_online_info", append(_getbotonlineinfoMw(), coze.GetBotOnlineInfo)...)
 		}
 		{
-			_conversation0 := _v1.Group("/conversation", _conversation0Mw()...)
-			_conversation0.POST("/create", append(_createconversationMw(), coze.CreateConversation)...)
+			_conversation1 := _v1.Group("/conversation", _conversation1Mw()...)
+			_conversation1.POST("/create", append(_createconversationMw(), coze.CreateConversation)...)
 			{
-				_message := _conversation0.Group("/message", _messageMw()...)
+				_message := _conversation1.Group("/message", _messageMw()...)
 				_message.POST("/list", append(_getapimessagelistMw(), coze.GetApiMessageList)...)
 			}
 		}

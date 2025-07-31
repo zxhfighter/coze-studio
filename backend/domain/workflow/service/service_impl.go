@@ -766,6 +766,13 @@ func (i *impl) UpdateMeta(ctx context.Context, id int64, metaUpdate *vo.MetaUpda
 		return err
 	}
 
+	if metaUpdate.WorkflowMode != nil && *metaUpdate.WorkflowMode == cloudworkflow.WorkflowMode_ChatFlow {
+		err = i.adaptToChatFlow(ctx, id)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = search.GetNotifier().PublishWorkflowResource(ctx, search.Updated, &search.Resource{
 		WorkflowID: id,
 		URI:        metaUpdate.IconURI,
@@ -1919,4 +1926,49 @@ func replaceRelatedWorkflowOrExternalResourceInWorkflowNodes(nodes []*vo.Node, r
 
 	}
 	return nil
+}
+
+func (i *impl) adaptToChatFlow(ctx context.Context, wID int64) error {
+	wfEntity, err := i.repo.GetEntity(ctx, &vo.GetPolicy{
+		ID:    wID,
+		QType: vo.FromDraft,
+	})
+	if err != nil {
+		return err
+	}
+
+	canvas := &vo.Canvas{}
+	err = sonic.UnmarshalString(wfEntity.Canvas, canvas)
+	if err != nil {
+		return err
+	}
+
+	startNode := canvas.StartNode()
+	vMap := make(map[string]bool)
+	for _, o := range startNode.Data.Outputs {
+		v, err := vo.ParseVariable(o)
+		if err != nil {
+			return err
+		}
+		vMap[v.Name] = true
+	}
+
+	if _, ok := vMap["USER_INPUT"]; !ok {
+		startNode.Data.Outputs = append(startNode.Data.Outputs, &vo.Variable{
+			Name: "USER_INPUT",
+			Type: vo.VariableTypeString,
+		})
+	}
+	if _, ok := vMap["CONVERSATION_NAME"]; !ok {
+		startNode.Data.Outputs = append(startNode.Data.Outputs, &vo.Variable{
+			Name:         "CONVERSATION_NAME",
+			Type:         vo.VariableTypeString,
+			DefaultValue: "Default",
+		})
+	}
+	canvasStr, err := sonic.MarshalString(canvas)
+	if err != nil {
+		return err
+	}
+	return i.Save(ctx, wID, canvasStr)
 }

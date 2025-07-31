@@ -380,6 +380,8 @@ func (i *impl) StreamExecute(ctx context.Context, config vo.ExecuteConfig, input
 		return nil, err
 	}
 
+	config.WorkflowMode = wfEntity.Mode
+
 	isApplicationWorkflow := wfEntity.AppID != nil
 	if isApplicationWorkflow && config.Mode == vo.ExecuteModeRelease {
 		err = i.checkApplicationWorkflowReleaseVersion(ctx, *wfEntity.AppID, config.ConnectorID, config.ID, config.Version)

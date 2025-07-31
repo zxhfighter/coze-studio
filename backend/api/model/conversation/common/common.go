@@ -52,6 +52,8 @@ func (p Scene) String() string {
 		return "GenerateAgentInfo"
 	case Scene_SceneOpenApi:
 		return "SceneOpenApi"
+	case Scene_SceneWorkflow:
+		return "SceneWorkflow"
 	}
 	return "<UNSET>"
 }
@@ -78,6 +80,8 @@ func SceneFromString(s string) (Scene, error) {
 		return Scene_GenerateAgentInfo, nil
 	case "SceneOpenApi":
 		return Scene_SceneOpenApi, nil
+	case "SceneWorkflow":
+		return Scene_SceneWorkflow, nil
 	}
 	return Scene(0), fmt.Errorf("not a valid Scene string")
 }

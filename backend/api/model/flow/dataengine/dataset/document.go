@@ -3,11 +3,11 @@
 package dataset
 
 import (
-	"github.com/coze-dev/coze-studio/backend/api/model/base"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/coze-dev/coze-studio/backend/api/model/base"
 )
 
 type ColumnType int64

@@ -1505,3 +1505,13 @@ func _upload1Mw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _getorcreateconversationMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _conversation1Mw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -22,6 +22,7 @@ import (
 
 	cloudworkflow "github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
 	"github.com/coze-dev/coze-studio/backend/pkg/errorx"
@@ -334,4 +335,92 @@ func (c *conversationImpl) replaceWorkflowsConversationName(ctx context.Context,
 
 func (c *conversationImpl) DeleteDynamicConversation(ctx context.Context, env vo.Env, templateID int64) (int64, error) {
 	return c.repo.DeleteDynamicConversation(ctx, env, templateID)
+}
+
+func (c *conversationImpl) GetOrCreateConversation(ctx context.Context, env vo.Env, appID, connectorID, userID int64, conversationName string) (int64, error) {
+	t, existed, err := c.repo.GetConversationTemplate(ctx, env, vo.GetConversationTemplatePolicy{
+		AppID: ptr.Of(appID),
+		Name:  ptr.Of(conversationName),
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	conversationIDGenerator := workflow.ConversationIDGenerator(func(ctx context.Context, appID int64, userID, connectorID int64) (int64, error) {
+		return conversation.GetConversationManager().CreateConversation(ctx, &conversation.CreateConversationRequest{
+			AppID:       appID,
+			UserID:      userID,
+			ConnectorID: connectorID,
+		})
+	})
+
+	if existed {
+		conversationID, _, err := c.repo.GetOrCreateStaticConversation(ctx, env, conversationIDGenerator, &vo.CreateStaticConversation{
+			AppID:       appID,
+			ConnectorID: connectorID,
+			UserID:      userID,
+			TemplateID:  t.TemplateID,
+		})
+		if err != nil {
+			return 0, err
+		}
+		return conversationID, nil
+	}
+
+	conversationID, _, err := c.repo.GetOrCreateDynamicConversation(ctx, env, conversationIDGenerator, &vo.CreateDynamicConversation{
+		AppID:       appID,
+		ConnectorID: connectorID,
+		UserID:      userID,
+		Name:        conversationName,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return conversationID, nil
+
+}
+
+func (c *conversationImpl) UpdateConversation(ctx context.Context, env vo.Env, appID, connectorID, userID int64, conversationName string) (int64, error) {
+	t, existed, err := c.repo.GetConversationTemplate(ctx, env, vo.GetConversationTemplatePolicy{
+		AppID: ptr.Of(appID),
+		Name:  ptr.Of(conversationName),
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	if existed {
+		newConversationID, err := conversation.GetConversationManager().CreateConversation(ctx, &conversation.CreateConversationRequest{
+			AppID:       appID,
+			UserID:      userID,
+			ConnectorID: connectorID,
+		})
+		err = c.repo.UpdateStaticConversation(ctx, env, t.TemplateID, connectorID, userID, newConversationID)
+		if err != nil {
+			return 0, err
+		}
+		return newConversationID, nil
+	}
+
+	dy, existed, err := c.repo.GetDynamicConversationByName(ctx, env, appID, connectorID, userID, conversationName)
+	if err != nil {
+		return 0, err
+	}
+
+	if !existed {
+		return 0, fmt.Errorf("conversation name %v not found", conversationName)
+	}
+
+	newConversationID, err := conversation.GetConversationManager().CreateConversation(ctx, &conversation.CreateConversationRequest{
+		AppID:       appID,
+		UserID:      userID,
+		ConnectorID: connectorID,
+	})
+	err = c.repo.UpdateDynamicConversation(ctx, env, dy.ConversationID, newConversationID)
+	if err != nil {
+		return 0, err
+	}
+	return newConversationID, nil
+
 }

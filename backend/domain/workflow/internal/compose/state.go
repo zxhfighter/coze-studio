@@ -86,7 +86,9 @@ func init() {
 	_ = compose.RegisterSerializableType[vo.Locator]("wf_locator")
 	_ = compose.RegisterSerializableType[vo.BizType]("biz_type")
 	_ = compose.RegisterSerializableType[*variableassigner.AppVariables]("app_variables")
+
 	_ = compose.RegisterSerializableType[workflow2.WorkflowMode]("workflow_mode")
+	_ = compose.RegisterSerializableType[*workflow2.EnterMessage]("workflow_entity_message")
 
 }
 

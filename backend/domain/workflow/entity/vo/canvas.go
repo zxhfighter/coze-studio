@@ -27,6 +27,15 @@ type Canvas struct {
 	Versions any     `json:"versions"`
 }
 
+func (c *Canvas) StartNode() *Node {
+	for _, node := range c.Nodes {
+		if node.Type == BlockTypeBotStart {
+			return node
+		}
+	}
+	panic("canvas start node not found")
+}
+
 type Node struct {
 	ID      string    `json:"id"`
 	Type    BlockType `json:"type"`

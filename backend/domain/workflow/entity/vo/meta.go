@@ -68,6 +68,7 @@ type MetaUpdate struct {
 	IconURI                *string
 	HasPublished           *bool
 	LatestPublishedVersion *string
+	WorkflowMode           *Mode
 }
 
 type MetaQuery struct {

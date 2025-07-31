@@ -65,6 +65,9 @@ service WorkflowService {
     workflow.GetChatFlowRoleResponse GetChatFlowRole(1: workflow.GetChatFlowRoleRequest request) (api.get='/api/workflow_api/chat_flow_role/get', api.category="workflow_api", api.gen_path="workflow_api", agw.preserve_base = "true")
     workflow.CreateChatFlowRoleResponse CreateChatFlowRole(1: workflow.CreateChatFlowRoleRequest request) (api.post='/api/workflow_api/chat_flow_role/create', api.category="workflow_api", api.gen_path="workflow_api", agw.preserve_base = "true")
     workflow.DeleteChatFlowRoleResponse DeleteChatFlowRole(1: workflow.DeleteChatFlowRoleRequest request) (api.post='/api/workflow_api/chat_flow_role/delete', api.category="workflow_api", api.gen_path="workflow_api", agw.preserve_base = "true")
+    workflow.GetOrCreateConversationResponse GetOrCreateConversation(1: workflow.GetOrCreateConversationRequest request)(api.post = "/api/workflow_api/conversation/create", api.category="workflow_api", api.gen_path="workflow_api",  agw.preserve_base = "true")
+
+
     // App 发布管理
     workflow.ListPublishWorkflowResponse ListPublishWorkflow(1: workflow.ListPublishWorkflowRequest request) (api.post='/api/workflow_api/list_publish_workflow', api.category="workflow_api", api.gen_path="workflow_api", agw.preserve_base = "true")
 
