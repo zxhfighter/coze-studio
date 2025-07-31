@@ -2200,3 +2200,34 @@ struct OpenAPIGetWorkflowInfoResponse{
 
     255: required base.BaseResp BaseResp
 }
+
+struct CreateConversationRequest {
+        1:  optional  map<string,string> MetaData (api.body = "meta_data") //自定义透传字段
+        3:  optional  i64             BotId (api.body = "bot_id",  api.js_conv="true")
+        4:  optional  i64             ConnectorId (api.body= "connector_id",  api.js_conv="true")
+        5:  optional string           SpaceID   (api.body= "space_id",  api.js_conv="true")
+        9 : optional string           AppID      (go.tag="json:\"app_id\"")
+        10: optional string           WorkflowID      (go.tag="json:\"workflow_id\"")
+        11: optional string           ConversationMame      (go.tag="json:\"conversation_name\"")
+        12: optional bool GetOrCreate  (go.tag="json:\"get_or_create\"")
+        13: optional bool DraftMode  (go.tag="json:\"draft_mode\"")
+        255: optional base.Base Base
+}
+
+
+struct CreateConversationResponse {
+    1: i64    code
+    2: string msg
+    3: optional ConversationData ConversationData (api.body = "data")
+}
+
+
+struct ConversationData {
+    1: i64             Id (api.body = "id", agw.key = "id", api.js_conv="true")
+    2: i64                CreatedAt (api.body = "created_at", agw.key = "created_at")
+    3: map<string,string> MetaData (api.body = "meta_data", agw.key = "meta_data")
+    4: optional i64 CreatorID (api.body = "creator_d", agw.key = "creator_d", api.js_conv="true")
+    5: optional i64 ConnectorID (api.body = "connector_id", agw.key="connector_id", api.js_conv="true")
+    6: optional i64 LastSectionID (api.body="last_section_id", api.js_conv="true")
+    7: optional i64    AccountID (api.body = "account_id")
+}

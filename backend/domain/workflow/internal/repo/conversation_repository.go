@@ -724,3 +724,60 @@ func (r *RepositoryImpl) UpdateDynamicConversationNameByID(ctx context.Context, 
 	}
 
 }
+
+func (r *RepositoryImpl) UpdateStaticConversation(ctx context.Context, env vo.Env, templateID int64, connectorID int64, userID int64, newConversationID int64) error {
+
+	if env == vo.Draft {
+		appStaticConversationDraft := r.query.AppStaticConversationDraft
+		_, err := appStaticConversationDraft.WithContext(ctx).Where(
+			appStaticConversationDraft.TemplateID.Eq(templateID),
+			appStaticConversationDraft.ConnectorID.Eq(connectorID),
+			appStaticConversationDraft.UserID.Eq(userID),
+		).UpdateColumn(appStaticConversationDraft.ConversationID, newConversationID)
+
+		if err != nil {
+			return err
+		}
+		return err
+
+	} else if env == vo.Online {
+		appStaticConversationOnline := r.query.AppStaticConversationOnline
+		_, err := appStaticConversationOnline.WithContext(ctx).Where(
+			appStaticConversationOnline.TemplateID.Eq(templateID),
+			appStaticConversationOnline.ConnectorID.Eq(connectorID),
+			appStaticConversationOnline.UserID.Eq(userID),
+		).UpdateColumn(appStaticConversationOnline.ConversationID, newConversationID)
+		if err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return fmt.Errorf("unknown env %v", env)
+	}
+
+}
+
+func (r *RepositoryImpl) UpdateDynamicConversation(ctx context.Context, env vo.Env, conversationID, newConversationID int64) error {
+	if env == vo.Draft {
+		appDynamicConversationDraft := r.query.AppDynamicConversationDraft
+		_, err := appDynamicConversationDraft.WithContext(ctx).Where(appDynamicConversationDraft.ConversationID.Eq(conversationID)).
+			UpdateColumn(appDynamicConversationDraft.ConversationID, newConversationID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	} else if env == vo.Online {
+		appDynamicConversationOnline := r.query.AppDynamicConversationOnline
+		_, err := appDynamicConversationOnline.WithContext(ctx).Where(appDynamicConversationOnline.ConversationID.Eq(conversationID)).
+			UpdateColumn(appDynamicConversationOnline.ConversationID, newConversationID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	} else {
+		return fmt.Errorf("unknown env %v", env)
+	}
+
+}

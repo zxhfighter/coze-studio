@@ -16,7 +16,10 @@
 
 package vo
 
-import "github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+import (
+	"github.com/cloudwego/eino/schema"
+	"github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+)
 
 type ExecuteConfig struct {
 	ID             int64
@@ -37,6 +40,7 @@ type ExecuteConfig struct {
 	WorkflowMode   WorkflowMode
 	RoundID        *int64 // if workflow is chat flow, conversation round id is required
 	ConversationID *int64 // if workflow is chat flow, conversation id is required
+	UserMessage    *schema.Message
 }
 
 type ExecuteMode string

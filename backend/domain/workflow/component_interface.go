@@ -32,7 +32,9 @@ type Executable interface {
 	AsyncExecute(ctx context.Context, config vo.ExecuteConfig, input map[string]any) (int64, error)
 	AsyncExecuteNode(ctx context.Context, nodeID string, config vo.ExecuteConfig, input map[string]any) (int64, error)
 	AsyncResume(ctx context.Context, req *entity.ResumeRequest, config vo.ExecuteConfig) error
+
 	StreamExecute(ctx context.Context, config vo.ExecuteConfig, input map[string]any) (*schema.StreamReader[*entity.Message], error)
+
 	StreamResume(ctx context.Context, req *entity.ResumeRequest, config vo.ExecuteConfig) (
 		*schema.StreamReader[*entity.Message], error)
 
@@ -65,6 +67,8 @@ type ConversationService interface {
 	ListDynamicConversation(ctx context.Context, env vo.Env, policy *vo.ListConversationPolicy) ([]*entity.DynamicConversation, error)
 	ReleaseConversationTemplate(ctx context.Context, appID int64, version string) error
 	InitApplicationDefaultConversationTemplate(ctx context.Context, spaceID int64, appID int64, userID int64) error
+	GetOrCreateConversation(ctx context.Context, env vo.Env, appID, connectorID, userID int64, conversationName string) (int64, error)
+	UpdateConversation(ctx context.Context, env vo.Env, appID, connectorID, userID int64, conversationName string) (int64, error)
 }
 
 type InterruptEventStore interface {
@@ -73,6 +77,9 @@ type InterruptEventStore interface {
 	UpdateFirstInterruptEvent(ctx context.Context, wfExeID int64, event *entity.InterruptEvent) error
 	PopFirstInterruptEvent(ctx context.Context, wfExeID int64) (*entity.InterruptEvent, bool, error)
 	ListInterruptEvents(ctx context.Context, wfExeID int64) ([]*entity.InterruptEvent, error)
+
+	BindConvRelatedInfo(ctx context.Context, convID int64, info entity.ConvRelatedInfo) error
+	GetConvRelatedInfo(ctx context.Context, convID int64) (*entity.ConvRelatedInfo, bool, func() error, error)
 }
 
 type CancelSignalStore interface {
@@ -122,4 +129,6 @@ type ConversationRepository interface {
 	ListDynamicConversation(ctx context.Context, env vo.Env, policy *vo.ListConversationPolicy) ([]*entity.DynamicConversation, error)
 	BatchCreateOnlineConversationTemplate(ctx context.Context, templates []*entity.ConversationTemplate, version string) error
 	UpdateDynamicConversationNameByID(ctx context.Context, env vo.Env, templateID int64, name string) error
+	UpdateStaticConversation(ctx context.Context, env vo.Env, templateID int64, connectorID int64, userID int64, newConversationID int64) error
+	UpdateDynamicConversation(ctx context.Context, env vo.Env, conversationID, newConversationID int64) error
 }

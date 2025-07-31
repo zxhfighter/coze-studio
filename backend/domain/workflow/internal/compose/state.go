@@ -87,6 +87,7 @@ func init() {
 	_ = compose.RegisterSerializableType[vo.BizType]("biz_type")
 	_ = compose.RegisterSerializableType[*execute.AppVariables]("app_variables")
 	_ = compose.RegisterSerializableType[workflow2.WorkflowMode]("workflow_mode")
+	_ = compose.RegisterSerializableType[*schema.Message]("schema_message")
 
 }
 

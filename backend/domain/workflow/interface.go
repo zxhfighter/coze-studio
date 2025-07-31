@@ -65,6 +65,8 @@ type Service interface {
 	SyncRelatedWorkflowResources(ctx context.Context, appID int64, relatedWorkflows map[int64]entity.IDVersionPair, related vo.ExternalResourceRelated) error
 
 	ConversationService
+	BindConvRelatedInfo(ctx context.Context, convID int64, info entity.ConvRelatedInfo) error
+	GetConvRelatedInfo(ctx context.Context, convID int64) (*entity.ConvRelatedInfo, bool, func() error, error)
 }
 
 type Repository interface {

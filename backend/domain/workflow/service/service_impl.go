@@ -851,6 +851,13 @@ func (i *impl) UpdateMeta(ctx context.Context, id int64, metaUpdate *vo.MetaUpda
 		return err
 	}
 
+	if metaUpdate.WorkflowMode != nil && *metaUpdate.WorkflowMode == cloudworkflow.WorkflowMode_ChatFlow {
+		err = i.adaptToChatFlow(ctx, id)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = search.GetNotifier().PublishWorkflowResource(ctx, search.Updated, &search.Resource{
 		WorkflowID: id,
 		URI:        metaUpdate.IconURI,
@@ -1822,6 +1829,14 @@ func (i *impl) MGet(ctx context.Context, policy *vo.MGetPolicy) ([]*entity.Workf
 	}
 }
 
+func (i *impl) BindConvRelatedInfo(ctx context.Context, convID int64, info entity.ConvRelatedInfo) error {
+	return i.repo.BindConvRelatedInfo(ctx, convID, info)
+}
+
+func (i *impl) GetConvRelatedInfo(ctx context.Context, convID int64) (*entity.ConvRelatedInfo, bool, func() error, error) {
+	return i.repo.GetConvRelatedInfo(ctx, convID)
+}
+
 func (i *impl) calculateTestRunSuccess(ctx context.Context, c *vo.Canvas, wid int64) (bool, error) {
 	sc, err := adaptor.CanvasToWorkflowSchema(ctx, c)
 	if err != nil { // not even legal, test run can't possibly be successful
@@ -2008,4 +2023,59 @@ func replaceRelatedWorkflowOrExternalResourceInWorkflowNodes(nodes []*vo.Node, r
 
 func RegisterAllNodeAdaptors() {
 	adaptor.RegisterAllNodeAdaptors()
+}
+func (i *impl) adaptToChatFlow(ctx context.Context, wID int64) error {
+	wfEntity, err := i.repo.GetEntity(ctx, &vo.GetPolicy{
+		ID:    wID,
+		QType: vo.FromDraft,
+	})
+	if err != nil {
+		return err
+	}
+
+	canvas := &vo.Canvas{}
+	err = sonic.UnmarshalString(wfEntity.Canvas, canvas)
+	if err != nil {
+		return err
+	}
+
+	var startNode *vo.Node
+	for _, node := range canvas.Nodes {
+		if node.Type == entity.NodeTypeEntry.IDStr() {
+			startNode = node
+			break
+		}
+	}
+
+	if startNode == nil {
+		return fmt.Errorf("can not find start node")
+	}
+
+	vMap := make(map[string]bool)
+	for _, o := range startNode.Data.Outputs {
+		v, err := vo.ParseVariable(o)
+		if err != nil {
+			return err
+		}
+		vMap[v.Name] = true
+	}
+
+	if _, ok := vMap["USER_INPUT"]; !ok {
+		startNode.Data.Outputs = append(startNode.Data.Outputs, &vo.Variable{
+			Name: "USER_INPUT",
+			Type: vo.VariableTypeString,
+		})
+	}
+	if _, ok := vMap["CONVERSATION_NAME"]; !ok {
+		startNode.Data.Outputs = append(startNode.Data.Outputs, &vo.Variable{
+			Name:         "CONVERSATION_NAME",
+			Type:         vo.VariableTypeString,
+			DefaultValue: "Default",
+		})
+	}
+	canvasStr, err := sonic.MarshalString(canvas)
+	if err != nil {
+		return err
+	}
+	return i.Save(ctx, wID, canvasStr)
 }

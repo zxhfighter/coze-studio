@@ -181,7 +181,7 @@ func convertMessage(msgs []*msgentity.Message) ([]*conversation.Message, error) 
 					for _, fd := range c.FileData {
 						mcs = append(mcs, &conversation.Content{
 							Type: string(c.Type),
-							Uri:  ptr.Of(fd.Url),
+							Uri:  ptr.Of(fd.URI),
 						})
 					}
 				} else {

@@ -20,6 +20,7 @@ package router
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -72,6 +73,19 @@ func staticFileRegister(r *server.Hertz) {
 
 		// index page will show 404 error
 		ctx.File(staticFile)
+	})
+
+	r.Handle(http.MethodPost, "api/permission_api/coze_web_app/impersonate_coze_user", func(c context.Context, ctx *app.RequestContext) {
+		ctx.JSON(200, map[string]any{
+			"code": 0,
+			"msg":  "ok",
+			"data": map[string]interface{}{
+				"access_token": "pat_ab1212d883ba6e0a63c28dd47a6e13629f7d5885b78b55d933e9caf9aae737c2",
+				"expires_in":   1753998220,
+				"token_type":   "Bearer",
+			},
+		})
+
 	})
 
 }

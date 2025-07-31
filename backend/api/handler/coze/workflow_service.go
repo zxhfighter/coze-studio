@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/cloudwego/hertz/pkg/app"
@@ -1094,9 +1095,62 @@ func OpenAPIChatFlowRun(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resp := new(workflow.ChatFlowRunResponse)
+	w := sse.NewWriter(c)
+	c.SetContentType("text/event-stream; charset=utf-8")
+	c.Response.Header.Set("Cache-Control", "no-cache")
+	c.Response.Header.Set("Connection", "keep-alive")
+	c.Response.Header.Set("Access-Control-Allow-Origin", "*")
 
-	c.JSON(consts.StatusOK, resp)
+	sr, err := appworkflow.SVC.OpenAPIChatFlowRun(ctx, &req)
+	if err != nil {
+		internalServerErrorResponse(ctx, c, err)
+		return
+	}
+	sendChatFlowStreamRunSSE(ctx, w, sr)
+
+}
+
+func sendChatFlowStreamRunSSE(ctx context.Context, w *sse.Writer, sr *schema.StreamReader[[]*workflow.ChatFlowRunResponse]) {
+	defer func() {
+		_ = w.Close()
+		sr.Close()
+	}()
+	seq := int64(1)
+	for {
+		respList, err := sr.Recv()
+
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				// finish
+				break
+			}
+
+			event := &sse.Event{
+				Type: "error",
+				Data: []byte(err.Error()),
+			}
+
+			if err = w.Write(event); err != nil {
+				logs.CtxErrorf(ctx, "publish stream event failed, err:%v", err)
+			}
+			return
+		}
+
+		for _, resp := range respList {
+			event := &sse.Event{
+				ID:   strconv.FormatInt(seq, 10),
+				Type: resp.Event,
+				Data: []byte(resp.Data),
+			}
+
+			if err = w.Write(event); err != nil {
+				logs.CtxErrorf(ctx, "publish stream event failed, err:%v", err)
+				return
+			}
+			seq++
+		}
+
+	}
 }
 
 // OpenAPIGetWorkflowInfo .
@@ -1110,7 +1164,11 @@ func OpenAPIGetWorkflowInfo(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resp := new(workflow.OpenAPIGetWorkflowInfoResponse)
+	resp, err := appworkflow.SVC.OpenAPIGetWorkflowInfo(ctx, &req)
+	if err != nil {
+		internalServerErrorResponse(ctx, c, err)
+		return
+	}
 
 	c.JSON(consts.StatusOK, resp)
 }
@@ -1147,6 +1205,25 @@ func GetExampleWorkFlowList(ctx context.Context, c *app.RequestContext) {
 	}
 
 	resp, err := appworkflow.SVC.GetExampleWorkFlowList(ctx, &req)
+	if err != nil {
+		internalServerErrorResponse(ctx, c, err)
+		return
+	}
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// OpenAPICreateConversation .
+// @router /v1/workflow/conversation/create [POST]
+func OpenAPICreateConversation(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req workflow.CreateConversationRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+	resp, err := appworkflow.SVC.OpenAPICreateConversation(ctx, &req)
 	if err != nil {
 		internalServerErrorResponse(ctx, c, err)
 		return

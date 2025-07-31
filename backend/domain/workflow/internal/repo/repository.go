@@ -500,6 +500,10 @@ func (r *RepositoryImpl) UpdateMeta(ctx context.Context, id int64, metaUpdate *v
 		expressions = append(expressions, r.query.WorkflowMeta.LatestVersion.Value(*metaUpdate.LatestPublishedVersion))
 	}
 
+	if metaUpdate.WorkflowMode != nil {
+		expressions = append(expressions, r.query.WorkflowMeta.Mode.Value(int32(*metaUpdate.WorkflowMode)))
+	}
+
 	if len(expressions) == 0 {
 		return nil
 	}
