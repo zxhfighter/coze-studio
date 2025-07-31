@@ -29,16 +29,24 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/spf13/cast"
 
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	nodesconversation "github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes/conversation"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
+	"github.com/coze-dev/coze-studio/backend/pkg/logs"
 )
 
 type Config struct {
-	Intents      []string
-	SystemPrompt string
-	IsFastMode   bool
-	ChatModel    model.BaseChatModel
+	Intents            []string
+	SystemPrompt       string
+	IsFastMode         bool
+	ChatModel          model.BaseChatModel
+	ChatHistorySetting *vo.ChatHistorySetting
 }
+
+type contextKey string
+
+const chatHistoryKey contextKey = "chatHistory"
 
 const SystemIntentPrompt = `
 # Role
@@ -125,7 +133,7 @@ func NewIntentDetector(ctx context.Context, cfg *Config) (*IntentDetector, error
 		&schema.Message{Content: sptTemplate, Role: schema.System},
 		&schema.Message{Content: "{{query}}", Role: schema.User})
 
-	r, err := chain.AppendChatTemplate(prompts).AppendChatModel(cfg.ChatModel).Compile(ctx)
+	r, err := chain.AppendChatTemplate(newHistoryChatTemplate(prompts, cfg)).AppendChatModel(cfg.ChatModel).Compile(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -209,4 +217,25 @@ func toIntentString(its []string) string {
 	}
 	itsBytes, _ := json.Marshal(vs)
 	return string(itsBytes)
+}
+
+func (id *IntentDetector) ToCallbackInput(ctx context.Context, in map[string]any) (map[string]any, error) {
+	if id.config.ChatHistorySetting == nil || !id.config.ChatHistorySetting.EnableChatHistory {
+		return in, nil
+	}
+
+	historyMessages, err := nodesconversation.GetConversationHistoryFromCtx(ctx, id.config.ChatHistorySetting.ChatHistoryRound)
+	if err != nil {
+		logs.CtxErrorf(ctx, "failed to get conversation history: %v", err)
+		return in, nil
+	}
+	if historyMessages == nil {
+		return in, nil
+	}
+
+	ret := map[string]any{
+		"chatHistory": historyMessages,
+		"query":       in["query"],
+	}
+	return ret, nil
 }

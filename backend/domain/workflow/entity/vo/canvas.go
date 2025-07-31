@@ -70,15 +70,16 @@ type Data struct {
 }
 
 type Inputs struct {
-	InputParameters    []*Param        `json:"inputParameters"`
-	Content            *BlockInput     `json:"content"`
-	TerminatePlan      *TerminatePlan  `json:"terminatePlan,omitempty"`
-	StreamingOutput    bool            `json:"streamingOutput,omitempty"`
-	CallTransferVoice  bool            `json:"callTransferVoice,omitempty"`
-	ChatHistoryWriting string          `json:"chatHistoryWriting,omitempty"`
-	LLMParam           any             `json:"llmParam,omitempty"` // The LLMParam type may be one of the LLMParam or IntentDetectorLLMParam type or QALLMParam type
-	FCParam            *FCParam        `json:"fcParam,omitempty"`
-	SettingOnError     *SettingOnError `json:"settingOnError,omitempty"`
+	InputParameters    []*Param            `json:"inputParameters"`
+	Content            *BlockInput         `json:"content"`
+	TerminatePlan      *TerminatePlan      `json:"terminatePlan,omitempty"`
+	StreamingOutput    bool                `json:"streamingOutput,omitempty"`
+	CallTransferVoice  bool                `json:"callTransferVoice,omitempty"`
+	ChatHistoryWriting string              `json:"chatHistoryWriting,omitempty"`
+	ChatHistorySetting *ChatHistorySetting `json:"chatHistorySetting,omitempty"`
+	LLMParam           any                 `json:"llmParam,omitempty"` // The LLMParam type may be one of the LLMParam or IntentDetectorLLMParam type or QALLMParam type
+	FCParam            *FCParam            `json:"fcParam,omitempty"`
+	SettingOnError     *SettingOnError     `json:"settingOnError,omitempty"`
 
 	LoopType           LoopType    `json:"loopType,omitempty"`
 	LoopCount          *BlockInput `json:"loopCount,omitempty"`
@@ -372,9 +373,8 @@ type DatabaseInfo struct {
 }
 
 type IntentDetector struct {
-	ChatHistorySetting *ChatHistorySetting `json:"chatHistorySetting,omitempty"`
-	Intents            []*Intent           `json:"intents,omitempty"`
-	Mode               string              `json:"mode,omitempty"`
+	Intents []*Intent `json:"intents,omitempty"`
+	Mode    string    `json:"mode,omitempty"`
 }
 type ChatHistorySetting struct {
 	EnableChatHistory bool  `json:"enableChatHistory,omitempty"`

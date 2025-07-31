@@ -20,16 +20,29 @@ import (
 	"context"
 	"errors"
 
+	"github.com/cloudwego/eino/schema"
+	oceanworkflow "github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/knowledge"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	nodesconversation "github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes/conversation"
+	"github.com/coze-dev/coze-studio/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/slices"
+	"github.com/coze-dev/coze-studio/backend/pkg/logs"
 )
 
 const outputList = "outputList"
 
+type contextKey string
+
+const chatHistoryKey contextKey = "chatHistory"
+
 type RetrieveConfig struct {
-	KnowledgeIDs      []int64
-	RetrievalStrategy *knowledge.RetrievalStrategy
-	Retriever         knowledge.KnowledgeOperator
+	KnowledgeIDs       []int64
+	RetrievalStrategy  *knowledge.RetrievalStrategy
+	Retriever          knowledge.KnowledgeOperator
+	ChatHistorySetting *vo.ChatHistorySetting
 }
 
 type KnowledgeRetrieve struct {
@@ -69,6 +82,7 @@ func (kr *KnowledgeRetrieve) Retrieve(ctx context.Context, input map[string]any)
 		Query:             query,
 		KnowledgeIDs:      kr.config.KnowledgeIDs,
 		RetrievalStrategy: kr.config.RetrievalStrategy,
+		ChatHistory:       kr.GetChatHistoryOrNil(ctx, kr.config),
 	}
 
 	response, err := kr.config.Retriever.Retrieve(ctx, req)
@@ -84,4 +98,59 @@ func (kr *KnowledgeRetrieve) Retrieve(ctx context.Context, input map[string]any)
 	})
 
 	return result, nil
+}
+
+func (kr *KnowledgeRetrieve) GetChatHistoryOrNil(ctx context.Context, cfg *RetrieveConfig) []*schema.Message {
+	if cfg.ChatHistorySetting == nil || !cfg.ChatHistorySetting.EnableChatHistory {
+		return nil
+	}
+
+	exeCtx := execute.GetExeCtx(ctx)
+	if exeCtx == nil {
+		logs.CtxWarnf(ctx, "execute context is nil, skipping chat history")
+		return nil
+	}
+	if exeCtx.ExeCfg.WorkflowMode != oceanworkflow.WorkflowMode_ChatFlow {
+		return nil
+	}
+
+	historyFromCtx, ok := ctxcache.Get[[]*conversation.Message](ctx, chatHistoryKey)
+	var messages []*conversation.Message
+	if ok {
+		messages = historyFromCtx
+	}
+
+	if len(messages) == 0 {
+		logs.CtxWarnf(ctx, "conversation history is empty")
+		return nil
+	}
+
+	historyMessages := make([]*schema.Message, 0, len(messages))
+	for _, msg := range messages {
+		schemaMsg, err := nodesconversation.ConvertMessageToSchema(ctx, msg)
+		if err != nil {
+			logs.CtxWarnf(ctx, "failed to convert history message, skipping: %v", err)
+			continue
+		}
+		historyMessages = append(historyMessages, schemaMsg)
+	}
+	return historyMessages
+}
+
+func (kr *KnowledgeRetrieve) ToCallbackInput(ctx context.Context, in map[string]any) (map[string]any, error) {
+	if kr.config.ChatHistorySetting == nil || !kr.config.ChatHistorySetting.EnableChatHistory {
+		return in, nil
+	}
+
+	messageList, err := nodesconversation.GetConversationHistoryFromCtx(ctx, kr.config.ChatHistorySetting.ChatHistoryRound)
+	if err != nil {
+		logs.CtxErrorf(ctx, "failed to get conversation history: %v", err)
+		return in, nil
+	}
+
+	ret := map[string]any{
+		"chatHistory": messageList,
+		"Query":       in["Query"],
+	}
+	return ret, nil
 }

@@ -42,6 +42,7 @@ import (
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	nodesconversation "github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes/conversation"
 	"github.com/coze-dev/coze-studio/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-studio/backend/pkg/logs"
@@ -49,6 +50,10 @@ import (
 	"github.com/coze-dev/coze-studio/backend/pkg/sonic"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
+
+type contextKey string
+
+const chatHistoryKey contextKey = "chatHistory"
 
 type Format int
 
@@ -168,15 +173,17 @@ type Config struct {
 	ToolsReturnDirectly   map[string]bool
 	KnowledgeRecallConfig *KnowledgeRecallConfig
 	FullSources           map[string]*nodes.SourceInfo
+	ChatHistorySetting    *vo.ChatHistorySetting
 }
 
 type LLM struct {
-	r                 compose.Runnable[map[string]any, map[string]any]
-	outputFormat      Format
-	outputFields      map[string]*vo.TypeInfo
-	canStream         bool
-	requireCheckpoint bool
-	fullSources       map[string]*nodes.SourceInfo
+	r                  compose.Runnable[map[string]any, map[string]any]
+	outputFormat       Format
+	outputFields       map[string]*vo.TypeInfo
+	canStream          bool
+	requireCheckpoint  bool
+	fullSources        map[string]*nodes.SourceInfo
+	ChatHistorySetting *vo.ChatHistorySetting
 }
 
 const (
@@ -313,8 +320,9 @@ func New(ctx context.Context, cfg *Config) (*LLM, error) {
 		sp := newPromptTpl(schema.System, cfg.SystemPrompt, inputs, nil)
 		up := newPromptTpl(schema.User, userPrompt, inputs, []string{knowledgeUserPromptTemplateKey})
 		template := newPrompts(sp, up, cfg.ChatModel)
+		templateWithChatHistory := newPromptsWithChatHistory(template, cfg.ChatHistorySetting)
 
-		_ = g.AddChatTemplateNode(templateNodeKey, template,
+		_ = g.AddChatTemplateNode(templateNodeKey, templateWithChatHistory,
 			compose.WithStatePreHandler(func(ctx context.Context, in map[string]any, state llmState) (map[string]any, error) {
 				for k, v := range state {
 					in[k] = v
@@ -327,7 +335,9 @@ func New(ctx context.Context, cfg *Config) (*LLM, error) {
 		sp := newPromptTpl(schema.System, cfg.SystemPrompt, cfg.InputFields, nil)
 		up := newPromptTpl(schema.User, userPrompt, cfg.InputFields, nil)
 		template := newPrompts(sp, up, cfg.ChatModel)
-		_ = g.AddChatTemplateNode(templateNodeKey, template)
+		templateWithChatHistory := newPromptsWithChatHistory(template, cfg.ChatHistorySetting)
+
+		_ = g.AddChatTemplateNode(templateNodeKey, templateWithChatHistory)
 
 		_ = g.AddEdge(compose.START, templateNodeKey)
 	}
@@ -471,11 +481,12 @@ func New(ctx context.Context, cfg *Config) (*LLM, error) {
 	}
 
 	llm := &LLM{
-		r:                 r,
-		outputFormat:      format,
-		canStream:         canStream,
-		requireCheckpoint: requireCheckpoint,
-		fullSources:       cfg.FullSources,
+		r:                  r,
+		outputFormat:       format,
+		canStream:          canStream,
+		requireCheckpoint:  requireCheckpoint,
+		fullSources:        cfg.FullSources,
+		ChatHistorySetting: cfg.ChatHistorySetting,
 	}
 
 	return llm, nil
@@ -811,6 +822,26 @@ type ToolInterruptEventStore interface {
 	SetToolInterruptEvent(llmNodeKey vo.NodeKey, toolCallID string, ie *entity.ToolInterruptEvent) error
 	GetToolInterruptEvents(llmNodeKey vo.NodeKey) (map[string]*entity.ToolInterruptEvent, error)
 	ResumeToolInterruptEvent(llmNodeKey vo.NodeKey, toolCallID string) (string, error)
+}
+
+func (l *LLM) ToCallbackInput(ctx context.Context, input map[string]any) (map[string]any, error) {
+	if l.ChatHistorySetting == nil || !l.ChatHistorySetting.EnableChatHistory {
+		return input, nil
+	}
+
+	messageList, err := nodesconversation.GetConversationHistoryFromCtx(ctx, l.ChatHistorySetting.ChatHistoryRound)
+	if err != nil {
+		logs.CtxErrorf(ctx, "failed to get conversation history: %v", err)
+		return input, nil
+	}
+
+	ret := map[string]any{
+		"chatHistory": messageList,
+	}
+	for k, v := range input {
+		ret[k] = v
+	}
+	return ret, nil
 }
 
 func (l *LLM) ToCallbackOutput(ctx context.Context, output map[string]any) (*nodes.StructuredCallbackOutput, error) {
