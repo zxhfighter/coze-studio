@@ -22,7 +22,7 @@ import (
 
 	"github.com/cloudwego/eino/components/prompt"
 	"github.com/cloudwego/eino/schema"
-	oceanworkflow "github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
@@ -62,7 +62,7 @@ func (t *historyChatTemplate) Format(ctx context.Context, vs map[string]any, opt
 		return baseMessages, nil
 	}
 
-	if exeCtx.ExeCfg.WorkflowMode != oceanworkflow.WorkflowMode_ChatFlow {
+	if exeCtx.ExeCfg.WorkflowMode != workflow.WorkflowMode_ChatFlow {
 		return baseMessages, nil
 	}
 

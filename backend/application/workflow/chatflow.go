@@ -26,7 +26,7 @@ import (
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
-	"github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/application/base/ctxutil"
 	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossmessage"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"

@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cast"
 
 	einoSchema "github.com/cloudwego/eino/schema"
-	oceanworkflow "github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/knowledge"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
@@ -221,7 +221,7 @@ func (kr *Retrieve) GetChatHistoryOrNil(ctx context.Context, ChatHistorySetting 
 		logs.CtxWarnf(ctx, "execute context is nil, skipping chat history")
 		return nil
 	}
-	if exeCtx.ExeCfg.WorkflowMode != oceanworkflow.WorkflowMode_ChatFlow {
+	if exeCtx.ExeCfg.WorkflowMode != workflow.WorkflowMode_ChatFlow {
 		return nil
 	}
 

@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	cloudworkflow "github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+	workflow2 "github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
@@ -220,7 +220,7 @@ func (c *conversationImpl) findReplaceWorkflowByConversationName(ctx context.Con
 		QType: vo.FromDraft,
 		MetaQuery: vo.MetaQuery{
 			AppID: ptr.Of(appID),
-			Mode:  ptr.Of(cloudworkflow.WorkflowMode_ChatFlow),
+			Mode:  ptr.Of(workflow2.WorkflowMode_ChatFlow),
 		},
 	})
 	if err != nil {

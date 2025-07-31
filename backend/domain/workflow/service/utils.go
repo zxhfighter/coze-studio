@@ -22,8 +22,8 @@ import (
 	"strconv"
 	"strings"
 
-	cloudworkflow "github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
-	"github.com/coze-dev/coze-studio/backend/domain/workflow"
+	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
+	wf "github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/variable"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
@@ -105,17 +105,17 @@ func validateWorkflowTree(ctx context.Context, config vo.ValidateTreeConfig) ([]
 	return issues, nil
 }
 
-func convertToValidationError(issue *validate.Issue) *cloudworkflow.ValidateErrorData {
-	e := &cloudworkflow.ValidateErrorData{}
+func convertToValidationError(issue *validate.Issue) *workflow.ValidateErrorData {
+	e := &workflow.ValidateErrorData{}
 	e.Message = issue.Message
 	if issue.NodeErr != nil {
-		e.Type = cloudworkflow.ValidateErrorType_BotValidateNodeErr
-		e.NodeError = &cloudworkflow.NodeError{
+		e.Type = workflow.ValidateErrorType_BotValidateNodeErr
+		e.NodeError = &workflow.NodeError{
 			NodeID: issue.NodeErr.NodeID,
 		}
 	} else if issue.PathErr != nil {
-		e.Type = cloudworkflow.ValidateErrorType_BotValidatePathErr
-		e.PathError = &cloudworkflow.PathError{
+		e.Type = workflow.ValidateErrorType_BotValidatePathErr
+		e.PathError = &workflow.PathError{
 			Start: issue.PathErr.StartNode,
 			End:   issue.PathErr.EndNode,
 		}
@@ -124,8 +124,8 @@ func convertToValidationError(issue *validate.Issue) *cloudworkflow.ValidateErro
 	return e
 }
 
-func toValidateErrorData(issues []*validate.Issue) []*cloudworkflow.ValidateErrorData {
-	validateErrors := make([]*cloudworkflow.ValidateErrorData, 0, len(issues))
+func toValidateErrorData(issues []*validate.Issue) []*workflow.ValidateErrorData {
+	validateErrors := make([]*workflow.ValidateErrorData, 0, len(issues))
 	for _, issue := range issues {
 		validateErrors = append(validateErrors, convertToValidationError(issue))
 	}
@@ -201,14 +201,14 @@ func isIncremental(prev version, next version) bool {
 	return next.Patch > prev.Patch
 }
 
-func GetAllNodesRecursively(ctx context.Context, wfEntity *entity.Workflow, repo workflow.Repository) ([]*vo.Node, error) {
+func GetAllNodesRecursively(ctx context.Context, wfEntity *entity.Workflow, repo wf.Repository) ([]*vo.Node, error) {
 	visited := make(map[string]struct{})
 	allNodes := make([]*vo.Node, 0)
 	err := getAllNodesRecursiveHelper(ctx, wfEntity, repo, visited, &allNodes)
 	return allNodes, err
 }
 
-func getAllNodesRecursiveHelper(ctx context.Context, wfEntity *entity.Workflow, repo workflow.Repository, visited map[string]struct{}, allNodes *[]*vo.Node) error {
+func getAllNodesRecursiveHelper(ctx context.Context, wfEntity *entity.Workflow, repo wf.Repository, visited map[string]struct{}, allNodes *[]*vo.Node) error {
 	visitedKey := fmt.Sprintf("%d:%s", wfEntity.ID, wfEntity.GetVersion())
 	if _, ok := visited[visitedKey]; ok {
 		return nil
@@ -223,7 +223,7 @@ func getAllNodesRecursiveHelper(ctx context.Context, wfEntity *entity.Workflow, 
 	return collectNodes(ctx, canvas.Nodes, repo, visited, allNodes)
 }
 
-func collectNodes(ctx context.Context, nodes []*vo.Node, repo workflow.Repository, visited map[string]struct{}, allNodes *[]*vo.Node) error {
+func collectNodes(ctx context.Context, nodes []*vo.Node, repo wf.Repository, visited map[string]struct{}, allNodes *[]*vo.Node) error {
 	for _, node := range nodes {
 		if node == nil {
 			continue

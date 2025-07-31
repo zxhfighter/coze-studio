@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/eino/schema"
-	oceanworkflow "github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+	workflow2 "github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
@@ -163,7 +163,7 @@ func GetConversationHistoryFromCtx(ctx context.Context, rounds int64) ([]any, er
 		return nil, nil
 	}
 
-	if exeCtx.ExeCfg.WorkflowMode != oceanworkflow.WorkflowMode_ChatFlow {
+	if exeCtx.ExeCfg.WorkflowMode != workflow2.WorkflowMode_ChatFlow {
 		return nil, nil
 	}
 

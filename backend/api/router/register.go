@@ -80,7 +80,7 @@ func staticFileRegister(r *server.Hertz) {
 			"code": 0,
 			"msg":  "ok",
 			"data": map[string]interface{}{
-				"access_token": "pat_ab1212d883ba6e0a63c28dd47a6e13629f7d5885b78b55d933e9caf9aae737c2",
+				"access_token": "pat_5732f3b083385561af45c67ac93ab67ff41e81dd82b27d4581688237841d81af",
 				"expires_in":   1753998220,
 				"token_type":   "Bearer",
 			},

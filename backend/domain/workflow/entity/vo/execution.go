@@ -18,7 +18,7 @@ package vo
 
 import (
 	"github.com/cloudwego/eino/schema"
-	"github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/workflow"
+	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
 )
 
 type ExecuteConfig struct {
