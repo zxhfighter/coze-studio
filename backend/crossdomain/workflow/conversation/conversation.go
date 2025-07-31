@@ -19,13 +19,14 @@ package conversation
 
 import (
 	"context"
+
 	"strconv"
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/coze-dev/coze-studio/backend/api/model/conversation/common"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossconversation"
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossmessage"
+	crossconversation "github.com/coze-dev/coze-studio/backend/crossdomain/contract/conversation"
+	crossmessage "github.com/coze-dev/coze-studio/backend/crossdomain/contract/message"
 	"github.com/coze-dev/coze-studio/backend/domain/conversation/conversation/entity"
 	msgentity "github.com/coze-dev/coze-studio/backend/domain/conversation/message/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"

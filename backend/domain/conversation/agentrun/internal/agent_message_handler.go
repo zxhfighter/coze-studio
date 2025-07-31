@@ -23,7 +23,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossagent"
+	crossagent "github.com/coze-dev/coze-studio/backend/crossdomain/contract/agent"
 	"github.com/coze-dev/coze-studio/backend/domain/conversation/message/entity"
 	"github.com/coze-dev/coze-studio/backend/infra/contract/imagex"
 )
