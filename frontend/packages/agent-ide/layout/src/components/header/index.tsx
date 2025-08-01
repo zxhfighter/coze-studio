@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { type ReactNode, useEffect, useRef } from 'react';
@@ -130,9 +130,7 @@ export const BotHeader: React.FC<BotHeaderProps> = props => {
             deployButton={props.deployButton}
           />
           {/** 模式选择器 */}
-          {diffTask || IS_OPEN_SOURCE ? null : (
-            <ModeSelect optionList={props.modeOptionList} />
-          )}
+          {diffTask ? null : <ModeSelect optionList={props.modeOptionList} />}
         </div>
 
         {/* 2. 中间bot菜单区 - 已下线 */}

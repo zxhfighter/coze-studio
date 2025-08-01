@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 import { type FC, useContext, useMemo } from 'react';
 
 import { I18n } from '@coze-arch/i18n';
@@ -55,13 +55,8 @@ const flowModeOptions = [
     label: I18n.t('wf_chatflow_76'),
     value: WorkflowMode.ChatFlow,
   },
-].filter(item => {
-  // 开源版本暂不支持对话流
-  if (item.value === WorkflowMode.ChatFlow && IS_OPEN_SOURCE) {
-    return false;
-  }
-  return true;
-});
+];
+
 const WorkflowModalFilter: FC<WorkFlowModalModeProps> = props => {
   const context = useContext(WorkflowModalContext);
   const { i18nText, ModalI18nKey } = useI18nText();

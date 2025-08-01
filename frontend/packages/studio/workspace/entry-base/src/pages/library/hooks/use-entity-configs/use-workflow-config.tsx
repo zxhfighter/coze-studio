@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 import { useWorkflowResourceAction } from '@coze-workflow/components';
 import { useUserInfo } from '@coze-foundation/account-adapter';
 import { ResType, WorkflowMode } from '@coze-arch/idl/plugin_develop';
@@ -77,18 +77,15 @@ export const useWorkflowConfig: UseEntityConfigHook = ({
           >
             {I18n.t('library_resource_type_workflow')}
           </Menu.Item>
-          {/* 开源版本暂时不支持对话流 */}
-          {!IS_OPEN_SOURCE ? (
-            <Menu.Item
-              data-testid="workspace.library.header.create.chatflow"
-              icon={<IconCozChat />}
-              onClick={() => {
-                openCreateModal(WorkflowMode.ChatFlow);
-              }}
-            >
-              {I18n.t('wf_chatflow_76')}
-            </Menu.Item>
-          ) : null}
+          <Menu.Item
+            data-testid="workspace.library.header.create.chatflow"
+            icon={<IconCozChat />}
+            onClick={() => {
+              openCreateModal(WorkflowMode.ChatFlow);
+            }}
+          >
+            {I18n.t('wf_chatflow_76')}
+          </Menu.Item>
         </>
       ),
       target: [ResType.Workflow, ResType.Imageflow],

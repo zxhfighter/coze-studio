@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 import React, {
   type ReactNode,
   useCallback,
@@ -41,10 +41,10 @@ import {
   usePrimarySidebarStore,
 } from '@coze-project-ide/biz-components';
 import { I18n } from '@coze-arch/i18n';
+import { Toast } from '@coze-arch/coze-design';
 import { WorkflowMode } from '@coze-arch/bot-api/workflow_api';
 import { ResourceCopyScene } from '@coze-arch/bot-api/plugin_develop';
 import { workflowApi } from '@coze-arch/bot-api';
-import { Toast } from '@coze-arch/coze-design';
 
 import { WORKFLOW_SUB_TYPE_ICON_MAP } from '@/constants';
 import { WorkflowTooltip } from '@/components';
@@ -233,17 +233,14 @@ export const useWorkflowResource = (): UseWorkflowResourceReturn => {
           subType: WorkflowMode.Workflow,
           tooltip: <WorkflowTooltip flowMode={WorkflowMode.Workflow} />,
         },
-        // 开源版本暂不支持对话流
-        IS_OPEN_SOURCE
-          ? null
-          : {
-              icon: WORKFLOW_SUB_TYPE_ICON_MAP[WorkflowMode.ChatFlow],
-              label: I18n.t('project_resource_sidebar_create_new_resource', {
-                resource: I18n.t('wf_chatflow_76'),
-              }),
-              subType: WorkflowMode.ChatFlow,
-              tooltip: <WorkflowTooltip flowMode={WorkflowMode.ChatFlow} />,
-            },
+        {
+          icon: WORKFLOW_SUB_TYPE_ICON_MAP[WorkflowMode.ChatFlow],
+          label: I18n.t('project_resource_sidebar_create_new_resource', {
+            resource: I18n.t('wf_chatflow_76'),
+          }),
+          subType: WorkflowMode.ChatFlow,
+          tooltip: <WorkflowTooltip flowMode={WorkflowMode.ChatFlow} />,
+        },
       ].filter(Boolean) as ResourceFolderCozeProps['createResourceConfig'],
     [],
   );
