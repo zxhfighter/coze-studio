@@ -24,17 +24,40 @@ import (
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type ConversationList struct {
+type ConversationList struct{}
+
+type ConversationListConfig struct{}
+
+func (c *ConversationListConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeConversationList,
+		Name:    n.Data.Meta.Title,
+		Configs: c,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewConversationList(_ context.Context) (*ConversationList, error) {
+func (c *ConversationListConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
 	return &ConversationList{}, nil
 }
 
@@ -43,7 +66,7 @@ type conversationInfo struct {
 	conversationId   string
 }
 
-func (c *ConversationList) List(ctx context.Context, _ map[string]any) (map[string]any, error) {
+func (c *ConversationList) Invoke(ctx context.Context, _ map[string]any) (map[string]any, error) {
 	var (
 		execCtx     = execute.GetExeCtx(ctx)
 		env         = ternary.IFElse(execCtx.ExeCfg.Mode == vo.ExecuteModeRelease, vo.Online, vo.Draft)

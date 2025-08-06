@@ -23,35 +23,49 @@ import (
 
 	wf "github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type ClearConversationHistoryConfig struct {
+type ClearConversationHistoryConfig struct{}
+
+type ClearConversationHistory struct {
 	Manager conversation.ConversationManager
 }
 
-type ClearConversationHistory struct {
-	cfg *ClearConversationHistoryConfig
+func (c *ClearConversationHistoryConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeClearConversationHistory,
+		Name:    n.Data.Meta.Title,
+		Configs: c,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewClearConversationHistory(_ context.Context, cfg *ClearConversationHistoryConfig) (*ClearConversationHistory, error) {
-	if cfg == nil {
-		return nil, errors.New("config is required")
-	}
-	if cfg.Manager == nil {
-		return nil, errors.New("manager is required")
-	}
-
+func (c *ClearConversationHistoryConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
 	return &ClearConversationHistory{
-		cfg: cfg,
+		Manager: conversation.GetConversationManager(),
 	}, nil
 }
 
-func (c *ClearConversationHistory) Clear(ctx context.Context, in map[string]any) (map[string]any, error) {
+func (c *ClearConversationHistory) Invoke(ctx context.Context, in map[string]any) (map[string]any, error) {
 
 	var (
 		execCtx     = execute.GetExeCtx(ctx)
@@ -109,7 +123,7 @@ func (c *ClearConversationHistory) Clear(ctx context.Context, in map[string]any)
 		}, nil
 	}
 
-	err = c.cfg.Manager.ClearConversationHistory(ctx, &conversation.ClearConversationHistoryReq{
+	err = c.Manager.ClearConversationHistory(ctx, &conversation.ClearConversationHistoryReq{
 		ConversationID: conversationID,
 	})
 	if err != nil {

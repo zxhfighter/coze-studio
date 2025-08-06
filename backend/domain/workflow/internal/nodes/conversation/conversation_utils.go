@@ -23,20 +23,13 @@ import (
 	"strings"
 
 	"github.com/cloudwego/eino/schema"
-	workflow2 "github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
-	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
-	"github.com/coze-dev/coze-studio/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/logs"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
-
-type contextKey string
-
-const chatHistoryKey contextKey = "chatHistory"
 
 func ConvertMessageToString(ctx context.Context, msg *conversation.Message) (string, error) {
 	if msg.MultiContent != nil {
@@ -81,7 +74,7 @@ func ConvertMessageToSchema(ctx context.Context, msg *conversation.Message) (*sc
 		return nil, fmt.Errorf("unknown role: %s", msg.Role)
 	}
 
-	if msg.Text != nil && *msg.Text != "" {
+	if msg.Text != nil {
 		schemaMsg.Content = *msg.Text
 		return schemaMsg, nil
 	}
@@ -91,7 +84,7 @@ func ConvertMessageToSchema(ctx context.Context, msg *conversation.Message) (*sc
 		for _, part := range msg.MultiContent {
 			schemaPart, err := convertContentPart(ctx, part)
 			if err != nil {
-				logs.CtxWarnf(ctx, "failed to convert content part, skipping: %v", err)
+				logs.CtxErrorf(ctx, "failed to convert content part, err: %v", err)
 				continue
 			}
 			multiContent = append(multiContent, schemaPart)
@@ -154,76 +147,4 @@ func convertContentPart(ctx context.Context, part *conversation.Content) (schema
 	}
 
 	return schemaPart, nil
-}
-
-func GetConversationHistoryFromCtx(ctx context.Context, rounds int64) ([]any, error) {
-	exeCtx := execute.GetExeCtx(ctx)
-	if exeCtx == nil {
-		logs.CtxWarnf(ctx, "execute context is nil, skipping chat history")
-		return nil, nil
-	}
-
-	if exeCtx.ExeCfg.WorkflowMode != workflow2.WorkflowMode_ChatFlow {
-		return nil, nil
-	}
-
-	convID := exeCtx.ExeCfg.ConversationID
-	agentID := exeCtx.ExeCfg.AgentID
-	appID := exeCtx.ExeCfg.AppID
-	userID := exeCtx.ExeCfg.Operator
-
-	if convID == nil || *convID == 0 {
-		logs.CtxWarnf(ctx, "ConversationID is 0 or nil, skipping chat history")
-		return nil, nil
-	}
-
-	var appIDVal int64
-	if appID != nil {
-		appIDVal = *appID
-	} else if agentID != nil {
-		appIDVal = *agentID
-	} else {
-		logs.CtxWarnf(ctx, "AppID and AgentID are both nil, skipping chat history")
-		return nil, nil
-	}
-
-	runIdsReq := &conversation.GetLatestRunIDsRequest{
-		ConversationID: *convID,
-		AppID:          appIDVal,
-		UserID:         userID,
-		Rounds:         rounds,
-	}
-
-	runIds, err := conversation.GetConversationManager().GetLatestRunIDs(ctx, runIdsReq)
-	if err != nil {
-		logs.CtxErrorf(ctx, "failed to get conversation history: %v", err)
-		return nil, nil
-	}
-	if len(runIds) <= 1 {
-		return []any{}, nil
-	}
-	runIds = runIds[1:]
-
-	response, err := conversation.GetConversationManager().GetMessagesByRunIDs(ctx, &conversation.GetMessagesByRunIDsRequest{
-		ConversationID: *convID,
-		RunIDs:         runIds,
-	})
-	if err != nil {
-		logs.CtxErrorf(ctx, "failed to get conversation history: %v", err)
-		return nil, nil
-	}
-
-	ctxcache.Store(ctx, chatHistoryKey, response.Messages)
-	messageList := make([]any, 0, len(response.Messages))
-	for _, msg := range response.Messages {
-		content, err := ConvertMessageToString(ctx, msg)
-		if err != nil {
-			return nil, nil
-		}
-		messageList = append(messageList, map[string]any{
-			"role":    msg.Role,
-			"content": content,
-		})
-	}
-	return messageList, nil
 }

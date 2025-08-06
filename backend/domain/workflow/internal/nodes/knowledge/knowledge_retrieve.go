@@ -253,14 +253,40 @@ func (kr *Retrieve) ToCallbackInput(ctx context.Context, in map[string]any) (map
 		return in, nil
 	}
 
-	messageList, err := nodesconversation.GetConversationHistoryFromCtx(ctx, kr.ChatHistorySetting.ChatHistoryRound)
-	if err != nil {
-		logs.CtxErrorf(ctx, "failed to get conversation history: %v", err)
+	var messages []*conversation.Message
+	execCtx := execute.GetExeCtx(ctx)
+	if execCtx != nil {
+		messages = execCtx.ExeCfg.ConversationHistory
+	}
+	if len(messages) == 0 {
 		return in, nil
 	}
 
+	count := 0
+	endIdx := 0
+	var historyMessages []any
+	for _, msg := range messages {
+		if count > int(kr.ChatHistorySetting.ChatHistoryRound) {
+			break
+		}
+		if msg.Role == "user" {
+			count++
+		}
+		endIdx++
+		content, err := nodesconversation.ConvertMessageToString(ctx, msg)
+		if err != nil {
+			logs.CtxWarnf(ctx, "failed to convert message to string: %v", err)
+			continue
+		}
+		historyMessages = append(historyMessages, map[string]any{
+			"role":    msg.Role,
+			"content": content,
+		})
+	}
+	ctxcache.Store(ctx, chatHistoryKey, messages[:endIdx])
+
 	ret := map[string]any{
-		"chatHistory": messageList,
+		"chatHistory": historyMessages,
 		"Query":       in["Query"],
 	}
 	return ret, nil

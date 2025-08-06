@@ -24,33 +24,46 @@ import (
 
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type MessageListConfig struct {
+type MessageListConfig struct{}
+
+type MessageList struct {
 	Lister conversation.ConversationManager
 }
-type MessageList struct {
-	config *MessageListConfig
+
+func (m *MessageListConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeMessageList,
+		Name:    n.Data.Meta.Title,
+		Configs: m,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewMessageList(_ context.Context, cfg *MessageListConfig) (*MessageList, error) {
-	if cfg == nil {
-		return nil, errors.New("config is required")
-	}
-
-	if cfg.Lister == nil {
-		return nil, errors.New("lister is required")
-	}
-
+func (m *MessageListConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
 	return &MessageList{
-		config: cfg,
+		Lister: conversation.GetConversationManager(),
 	}, nil
-
 }
 
 func (m *MessageList) getConversationIDByName(ctx context.Context, env vo.Env, appID *int64, version, conversationName string, userID, connectorID int64) (int64, error) {
@@ -86,7 +99,7 @@ func (m *MessageList) getConversationIDByName(ctx context.Context, env vo.Env, a
 	return conversationID, nil
 }
 
-func (m *MessageList) List(ctx context.Context, input map[string]any) (map[string]any, error) {
+func (m *MessageList) Invoke(ctx context.Context, input map[string]any) (map[string]any, error) {
 	var (
 		execCtx     = execute.GetExeCtx(ctx)
 		env         = ternary.IFElse(execCtx.ExeCfg.Mode == vo.ExecuteModeRelease, vo.Online, vo.Draft)
@@ -167,7 +180,7 @@ func (m *MessageList) List(ctx context.Context, input map[string]any) (map[strin
 		return nil, vo.WrapError(errno.ErrInvalidParameter, fmt.Errorf("BeforeID and AfterID cannot be set at the same time"))
 	}
 
-	ml, err := m.config.Lister.MessageList(ctx, req)
+	ml, err := m.Lister.MessageList(ctx, req)
 	if err != nil {
 		return nil, err
 	}

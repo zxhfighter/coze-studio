@@ -23,21 +23,45 @@ import (
 	"strconv"
 
 	wf "github.com/coze-dev/coze-studio/backend/domain/workflow"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type UpdateConversation struct {
+type UpdateConversationConfig struct{}
+
+type UpdateConversation struct{}
+
+func (c *UpdateConversationConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeConversationUpdate,
+		Name:    n.Data.Meta.Title,
+		Configs: c,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewUpdateConversation(_ context.Context) *UpdateConversation {
-	return &UpdateConversation{}
+func (c *UpdateConversationConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
+	return &UpdateConversation{}, nil
 }
 
-func (c *UpdateConversation) Update(ctx context.Context, in map[string]any) (map[string]any, error) {
+func (c *UpdateConversation) Invoke(ctx context.Context, in map[string]any) (map[string]any, error) {
 
 	var (
 		execCtx     = execute.GetExeCtx(ctx)

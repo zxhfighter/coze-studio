@@ -2112,9 +2112,11 @@ func (w *ApplicationService) ListWorkflow(ctx context.Context, req *workflow.Get
 			},
 		}
 
-		ww.CheckResult, err = GetWorkflowDomainSVC().WorkflowSchemaCheck(ctx, w, req.Checker)
-		if err != nil {
-			return nil, err
+		if len(req.Checker) > 0 && status == workflow.WorkFlowListStatus_HadPublished {
+			ww.CheckResult, err = GetWorkflowDomainSVC().WorkflowSchemaCheck(ctx, w, req.Checker)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if qType == vo.FromDraft {

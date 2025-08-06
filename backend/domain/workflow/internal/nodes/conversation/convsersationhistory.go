@@ -24,34 +24,49 @@ import (
 	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	wf "github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type ConversationHistoryConfig struct {
+type ConversationHistoryConfig struct{}
+
+type ConversationHistory struct {
 	Manager conversation.ConversationManager
 }
 
-type ConversationHistory struct {
-	cfg *ConversationHistoryConfig
+func (ch *ConversationHistoryConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeConversationHistory,
+		Name:    n.Data.Meta.Title,
+		Configs: ch,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewConversationHistory(_ context.Context, cfg *ConversationHistoryConfig) (*ConversationHistory, error) {
-	if cfg == nil {
-		return nil, errors.New("config is required")
-	}
-	if cfg.Manager == nil {
-		return nil, errors.New("manager is required")
-	}
+func (ch *ConversationHistoryConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
 	return &ConversationHistory{
-		cfg: cfg,
+		Manager: conversation.GetConversationManager(),
 	}, nil
 }
 
-func (ch *ConversationHistory) HistoryMessages(ctx context.Context, input map[string]any) (map[string]any, error) {
+func (ch *ConversationHistory) Invoke(ctx context.Context, input map[string]any) (map[string]any, error) {
 	var (
 		execCtx     = execute.GetExeCtx(ctx)
 		env         = ternary.IFElse(execCtx.ExeCfg.Mode == vo.ExecuteModeRelease, vo.Online, vo.Draft)
@@ -117,7 +132,7 @@ func (ch *ConversationHistory) HistoryMessages(ctx context.Context, input map[st
 		rounds += 1
 	}
 
-	runIDs, err := ch.cfg.Manager.GetLatestRunIDs(ctx, &conversation.GetLatestRunIDsRequest{
+	runIDs, err := ch.Manager.GetLatestRunIDs(ctx, &conversation.GetLatestRunIDsRequest{
 		ConversationID: conversationID,
 		UserID:         userID,
 		AppID:          *appID,
@@ -144,7 +159,7 @@ func (ch *ConversationHistory) HistoryMessages(ctx context.Context, input map[st
 		runIDs = runIDs[1:] // chatflow needs to filter out this session
 	}
 
-	response, err := ch.cfg.Manager.GetMessagesByRunIDs(ctx, &conversation.GetMessagesByRunIDsRequest{
+	response, err := ch.Manager.GetMessagesByRunIDs(ctx, &conversation.GetMessagesByRunIDsRequest{
 		ConversationID: conversationID,
 		RunIDs:         runIDs,
 	})

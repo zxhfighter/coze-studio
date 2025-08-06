@@ -24,35 +24,49 @@ import (
 
 	wf "github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type DeleteMessageConfig struct {
+type DeleteMessageConfig struct{}
+
+type DeleteMessage struct {
 	Manager conversation.ConversationManager
 }
 
-type DeleteMessage struct {
-	config *DeleteMessageConfig
+func (d *DeleteMessageConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeDeleteMessage,
+		Name:    n.Data.Meta.Title,
+		Configs: d,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewDeleteMessage(_ context.Context, cfg *DeleteMessageConfig) (*DeleteMessage, error) {
-	if cfg == nil {
-		return nil, errors.New("config is required")
-	}
-	if cfg.Manager == nil {
-		return nil, errors.New("manager is required")
-	}
-
+func (d *DeleteMessageConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
 	return &DeleteMessage{
-		config: cfg,
+		Manager: conversation.GetConversationManager(),
 	}, nil
 }
 
-func (c *DeleteMessage) Delete(ctx context.Context, input map[string]any) (map[string]any, error) {
+func (d *DeleteMessage) Invoke(ctx context.Context, input map[string]any) (map[string]any, error) {
 	var (
 		execCtx     = execute.GetExeCtx(ctx)
 		env         = ternary.IFElse(execCtx.ExeCfg.Mode == vo.ExecuteModeRelease, vo.Online, vo.Draft)
@@ -92,7 +106,7 @@ func (c *DeleteMessage) Delete(ctx context.Context, input map[string]any) (map[s
 			return failedMap, nil
 		}
 
-		err = c.config.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: *execCtx.ExeCfg.ConversationID, MessageID: messageID})
+		err = d.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: *execCtx.ExeCfg.ConversationID, MessageID: messageID})
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}
@@ -119,7 +133,7 @@ func (c *DeleteMessage) Delete(ctx context.Context, input map[string]any) (map[s
 			return failedMap, nil
 		}
 
-		err = c.config.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: sts.ConversationID, MessageID: messageID})
+		err = d.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: sts.ConversationID, MessageID: messageID})
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}
@@ -136,7 +150,7 @@ func (c *DeleteMessage) Delete(ctx context.Context, input map[string]any) (map[s
 			return failedMap, nil
 		}
 
-		err = c.config.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: dyConversation.ConversationID, MessageID: messageID})
+		err = d.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: dyConversation.ConversationID, MessageID: messageID})
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}

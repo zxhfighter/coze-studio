@@ -22,33 +22,47 @@ import (
 	"fmt"
 	"strconv"
 
-	wf "github.com/coze-dev/coze-studio/backend/domain/workflow"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type EditMessageConfig struct {
+type EditMessageConfig struct{}
+
+type EditMessage struct {
 	Manager conversation.ConversationManager
 }
 
-type EditMessage struct {
-	config *EditMessageConfig
+func (e *EditMessageConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeEditMessage,
+		Name:    n.Data.Meta.Title,
+		Configs: e,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewEditMessage(_ context.Context, cfg *EditMessageConfig) (*EditMessage, error) {
-	if cfg == nil {
-		return nil, errors.New("config is required")
-	}
-	if cfg.Manager == nil {
-		return nil, errors.New("clearer is required")
-	}
-
+func (e *EditMessageConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
 	return &EditMessage{
-		config: cfg,
+		Manager: conversation.GetConversationManager(),
 	}, nil
 }
 
@@ -99,14 +113,14 @@ func (e *EditMessage) Edit(ctx context.Context, input map[string]any) (map[strin
 			return failedMap, nil
 		}
 
-		err = e.config.Manager.EditMessage(ctx, &conversation.EditMessageRequest{ConversationID: *execCtx.ExeCfg.ConversationID, MessageID: messageID, Content: newContent})
+		err = e.Manager.EditMessage(ctx, &conversation.EditMessageRequest{ConversationID: *execCtx.ExeCfg.ConversationID, MessageID: messageID, Content: newContent})
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}
 		return successMap, err
 	}
 
-	t, existed, err := wf.GetRepository().GetConversationTemplate(ctx, env, vo.GetConversationTemplatePolicy{
+	t, existed, err := workflow.GetRepository().GetConversationTemplate(ctx, env, vo.GetConversationTemplatePolicy{
 		AppID:   appID,
 		Name:    ptr.Of(conversationName),
 		Version: ptr.Of(version),
@@ -116,7 +130,7 @@ func (e *EditMessage) Edit(ctx context.Context, input map[string]any) (map[strin
 	}
 
 	if existed {
-		sts, existed, err := wf.GetRepository().GetStaticConversationByTemplateID(ctx, env, userID, connectorID, t.TemplateID)
+		sts, existed, err := workflow.GetRepository().GetStaticConversationByTemplateID(ctx, env, userID, connectorID, t.TemplateID)
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}
@@ -125,7 +139,7 @@ func (e *EditMessage) Edit(ctx context.Context, input map[string]any) (map[strin
 			return failedMap, nil
 		}
 
-		err = e.config.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: sts.ConversationID, MessageID: messageID})
+		err = e.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: sts.ConversationID, MessageID: messageID})
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}
@@ -133,7 +147,7 @@ func (e *EditMessage) Edit(ctx context.Context, input map[string]any) (map[strin
 		return successMap, nil
 
 	} else {
-		dyConversation, existed, err := wf.GetRepository().GetDynamicConversationByName(ctx, env, *appID, connectorID, userID, conversationName)
+		dyConversation, existed, err := workflow.GetRepository().GetDynamicConversationByName(ctx, env, *appID, connectorID, userID, conversationName)
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}
@@ -142,7 +156,7 @@ func (e *EditMessage) Edit(ctx context.Context, input map[string]any) (map[strin
 			return failedMap, nil
 		}
 
-		err = e.config.Manager.EditMessage(ctx, &conversation.EditMessageRequest{ConversationID: dyConversation.ConversationID, MessageID: messageID, Content: newContent})
+		err = e.Manager.EditMessage(ctx, &conversation.EditMessageRequest{ConversationID: dyConversation.ConversationID, MessageID: messageID, Content: newContent})
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}

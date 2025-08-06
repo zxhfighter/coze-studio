@@ -1685,42 +1685,152 @@ func (i *impl) GetWorkflowDependenceResource(ctx context.Context, workflowID int
 
 }
 
-// checkBotAgentNodes checks for rules related to BotAgent.
-// It returns an error with the reason if the check fails.
-func (i *impl) checkBotAgentNodes(nodes []*vo.Node) error {
-	for _, node := range nodes {
-		if node.Type == entity.NodeTypeCreateConversation.IDStr() || node.Type == entity.NodeTypeConversationDelete.IDStr() || node.Type == entity.NodeTypeConversationUpdate.IDStr() || node.Type == entity.NodeTypeConversationList.IDStr() {
-			return errors.New("不支持在对话流内添加会话相关节点")
+func (i *impl) checkBotAgentNode(node *vo.Node) error {
+	if node.Type == entity.NodeTypeCreateConversation.IDStr() || node.Type == entity.NodeTypeConversationDelete.IDStr() || node.Type == entity.NodeTypeConversationUpdate.IDStr() || node.Type == entity.NodeTypeConversationList.IDStr() {
+		return errors.New("session-related nodes are not supported in conversation flow")
+	}
+	return nil
+}
+
+func (i *impl) validateNodesRecursively(ctx context.Context, nodes []*vo.Node, checkType cloudworkflow.CheckType, visited map[string]struct{}, repo workflow.Repository) error {
+	queue := make([]*vo.Node, 0, len(nodes))
+	queue = append(queue, nodes...)
+
+	for len(queue) > 0 {
+		node := queue[0]
+		queue = queue[1:]
+
+		if node == nil {
+			continue
+		}
+
+		var checkErr error
+		switch checkType {
+		case cloudworkflow.CheckType_BotAgent:
+			checkErr = i.checkBotAgentNode(node)
+		default:
+			// For now, we only handle BotAgent check, so we can do nothing here.
+			// In the future, if there are other check types that need to be validated on every node, this logic will need to be adjusted.
+		}
+		if checkErr != nil {
+			return checkErr
+		}
+
+		// Enqueue nested nodes for BFS traversal. This handles Loop, Batch, and other nodes with nested blocks.
+		if len(node.Blocks) > 0 {
+			queue = append(queue, node.Blocks...)
+		}
+
+		if node.Type == entity.NodeTypeSubWorkflow.IDStr() && node.Data != nil && node.Data.Inputs != nil {
+			workflowIDStr := node.Data.Inputs.WorkflowID
+			if workflowIDStr == "" {
+				continue
+			}
+
+			workflowID, err := strconv.ParseInt(workflowIDStr, 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid workflow ID in sub-workflow node %s: %w", node.ID, err)
+			}
+
+			version := node.Data.Inputs.WorkflowVersion
+			qType := vo.FromDraft
+			if version != "" {
+				qType = vo.FromSpecificVersion
+			}
+
+			visitedKey := fmt.Sprintf("%d:%s", workflowID, version)
+			if _, ok := visited[visitedKey]; ok {
+				continue
+			}
+			visited[visitedKey] = struct{}{}
+
+			subWfEntity, err := repo.GetEntity(ctx, &vo.GetPolicy{
+				ID:      workflowID,
+				QType:   qType,
+				Version: version,
+			})
+			if err != nil {
+				delete(visited, visitedKey)
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					continue
+				}
+				return fmt.Errorf("failed to get sub-workflow entity %d: %w", workflowID, err)
+			}
+
+			var canvas vo.Canvas
+			if err := sonic.UnmarshalString(subWfEntity.Canvas, &canvas); err != nil {
+				return fmt.Errorf("failed to unmarshal canvas for workflow %d: %w", subWfEntity.ID, err)
+			}
+
+			queue = append(queue, canvas.Nodes...)
+		}
+
+		if node.Type == entity.NodeTypeLLM.IDStr() && node.Data != nil && node.Data.Inputs != nil && node.Data.Inputs.FCParam != nil && node.Data.Inputs.FCParam.WorkflowFCParam != nil {
+			for _, subWfInfo := range node.Data.Inputs.FCParam.WorkflowFCParam.WorkflowList {
+				if subWfInfo.WorkflowID == "" {
+					continue
+				}
+				workflowID, err := strconv.ParseInt(subWfInfo.WorkflowID, 10, 64)
+				if err != nil {
+					return fmt.Errorf("invalid workflow ID in large model node %s: %w", node.ID, err)
+				}
+
+				version := subWfInfo.WorkflowVersion
+				qType := vo.FromDraft
+				if version != "" {
+					qType = vo.FromSpecificVersion
+				}
+
+				visitedKey := fmt.Sprintf("%d:%s", workflowID, version)
+				if _, ok := visited[visitedKey]; ok {
+					continue
+				}
+				visited[visitedKey] = struct{}{}
+
+				subWfEntity, err := repo.GetEntity(ctx, &vo.GetPolicy{
+					ID:      workflowID,
+					QType:   qType,
+					Version: version,
+				})
+				if err != nil {
+					delete(visited, visitedKey)
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						continue
+					}
+					return fmt.Errorf("failed to get sub-workflow entity %d from large model node: %w", workflowID, err)
+				}
+
+				var canvas vo.Canvas
+				if err := sonic.UnmarshalString(subWfEntity.Canvas, &canvas); err != nil {
+					return fmt.Errorf("failed to unmarshal canvas for workflow %d from large model node: %w", subWfEntity.ID, err)
+				}
+
+				queue = append(queue, canvas.Nodes...)
+			}
 		}
 	}
 	return nil
 }
 
 func (i *impl) WorkflowSchemaCheck(ctx context.Context, wf *entity.Workflow, checks []cloudworkflow.CheckType) ([]*cloudworkflow.CheckResult, error) {
-	if len(checks) == 0 {
-		return nil, nil
-	}
-
-	nodeList, err := GetAllNodesRecursively(ctx, wf, i.repo)
-	if err != nil {
-		return nil, err
-	}
-
 	checkResults := make([]*cloudworkflow.CheckResult, 0, len(checks))
-	for _, checkType := range checks {
-		var checkErr error
-		switch checkType {
-		case cloudworkflow.CheckType_BotAgent:
-			checkErr = i.checkBotAgentNodes(nodeList)
-		// TODO: Add other cases here for new check types
-		default:
-			continue
-		}
 
-		if checkErr != nil {
+	var canvas vo.Canvas
+	if err := sonic.UnmarshalString(wf.Canvas, &canvas); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal canvas for workflow %d: %w", wf.ID, err)
+	}
+
+	for _, checkType := range checks {
+		visited := make(map[string]struct{})
+		visitedKey := fmt.Sprintf("%d:%s", wf.ID, wf.GetVersion())
+		visited[visitedKey] = struct{}{}
+
+		err := i.validateNodesRecursively(ctx, canvas.Nodes, checkType, visited, i.repo)
+
+		if err != nil {
 			checkResults = append(checkResults, &cloudworkflow.CheckResult{
 				IsPass: false,
-				Reason: checkErr.Error(),
+				Reason: err.Error(),
 				Type:   checkType,
 			})
 		} else {

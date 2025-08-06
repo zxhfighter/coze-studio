@@ -23,34 +23,49 @@ import (
 
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type CreateConversationConfig struct {
+type CreateConversationConfig struct{}
+
+type CreateConversation struct {
 	Manager conversation.ConversationManager
 }
 
-type CreateConversation struct {
-	config *CreateConversationConfig
+func (c *CreateConversationConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeCreateConversation,
+		Name:    n.Data.Meta.Title,
+		Configs: c,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewCreateConversation(_ context.Context, cfg *CreateConversationConfig) (*CreateConversation, error) {
-	if cfg == nil {
-		return nil, errors.New("config is required")
-	}
-	if cfg.Manager == nil {
-		return nil, errors.New("manager is required")
-	}
+func (c *CreateConversationConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
 	return &CreateConversation{
-		config: cfg,
+		Manager: conversation.GetConversationManager(),
 	}, nil
 }
 
-func (c *CreateConversation) Create(ctx context.Context, input map[string]any) (map[string]any, error) {
+func (c *CreateConversation) Invoke(ctx context.Context, input map[string]any) (map[string]any, error) {
 
 	var (
 		execCtx                 = execute.GetExeCtx(ctx)
@@ -61,7 +76,7 @@ func (c *CreateConversation) Create(ctx context.Context, input map[string]any) (
 		connectorID             = execCtx.ExeCfg.ConnectorID
 		userID                  = execCtx.ExeCfg.Operator
 		conversationIDGenerator = workflow.ConversationIDGenerator(func(ctx context.Context, appID int64, userID, connectorID int64) (int64, error) {
-			return c.config.Manager.CreateConversation(ctx, &conversation.CreateConversationRequest{
+			return c.Manager.CreateConversation(ctx, &conversation.CreateConversationRequest{
 				AppID:       appID,
 				UserID:      userID,
 				ConnectorID: connectorID,

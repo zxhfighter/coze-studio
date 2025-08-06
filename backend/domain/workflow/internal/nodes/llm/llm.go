@@ -36,6 +36,7 @@ import (
 
 	workflow3 "github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/knowledge"
 	crossmodel "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/model"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/plugin"
@@ -1228,14 +1229,40 @@ func (l *LLM) ToCallbackInput(ctx context.Context, input map[string]any) (map[st
 		return input, nil
 	}
 
-	messageList, err := nodesconversation.GetConversationHistoryFromCtx(ctx, l.chatHistorySetting.ChatHistoryRound)
-	if err != nil {
-		logs.CtxErrorf(ctx, "failed to get conversation history: %v", err)
+	var messages []*conversation.Message
+	execCtx := execute.GetExeCtx(ctx)
+	if execCtx != nil {
+		messages = execCtx.ExeCfg.ConversationHistory
+	}
+	if len(messages) == 0 {
 		return input, nil
 	}
 
+	count := 0
+	endIdx := 0
+	var historyMessages []any
+	for _, msg := range messages {
+		if count > int(l.chatHistorySetting.ChatHistoryRound) {
+			break
+		}
+		if msg.Role == "user" {
+			count++
+		}
+		endIdx++
+		content, err := nodesconversation.ConvertMessageToString(ctx, msg)
+		if err != nil {
+			logs.CtxWarnf(ctx, "failed to convert message to string: %v", err)
+			continue
+		}
+		historyMessages = append(historyMessages, map[string]any{
+			"role":    msg.Role,
+			"content": content,
+		})
+	}
+	ctxcache.Store(ctx, chatHistoryKey, messages[:endIdx])
+
 	ret := map[string]any{
-		"chatHistory": messageList,
+		"chatHistory": historyMessages,
 	}
 	for k, v := range input {
 		ret[k] = v

@@ -21,22 +21,46 @@ import (
 	"errors"
 	"fmt"
 
-	wf "github.com/coze-dev/coze-studio/backend/domain/workflow"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
 )
 
-type DeleteConversation struct {
+type DeleteConversationConfig struct{}
+
+type DeleteConversation struct{}
+
+func (d *DeleteConversationConfig) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema.NodeSchema, error) {
+	ns := &schema.NodeSchema{
+		Key:     vo.NodeKey(n.ID),
+		Type:    entity.NodeTypeConversationDelete,
+		Name:    n.Data.Meta.Title,
+		Configs: d,
+	}
+
+	if err := convert.SetInputsForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	if err := convert.SetOutputTypesForNodeSchema(n, ns); err != nil {
+		return nil, err
+	}
+
+	return ns, nil
 }
 
-func NewDeleteConversation(_ context.Context) *DeleteConversation {
-	return &DeleteConversation{}
+func (d *DeleteConversationConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ...schema.BuildOption) (any, error) {
+	return &DeleteConversation{}, nil
 }
 
-func (c *DeleteConversation) Delete(ctx context.Context, in map[string]any) (map[string]any, error) {
+func (d *DeleteConversation) Invoke(ctx context.Context, in map[string]any) (map[string]any, error) {
 
 	var (
 		execCtx     = execute.GetExeCtx(ctx)
@@ -63,7 +87,7 @@ func (c *DeleteConversation) Delete(ctx context.Context, in map[string]any) (map
 
 	conversationName := cName.(string)
 
-	_, existed, err := wf.GetRepository().GetConversationTemplate(ctx, env, vo.GetConversationTemplatePolicy{
+	_, existed, err := workflow.GetRepository().GetConversationTemplate(ctx, env, vo.GetConversationTemplatePolicy{
 		AppID:   appID,
 		Name:    ptr.Of(conversationName),
 		Version: ptr.Of(version),
@@ -76,7 +100,7 @@ func (c *DeleteConversation) Delete(ctx context.Context, in map[string]any) (map
 		return nil, vo.WrapError(errno.ErrConversationNodeInvalidOperation, fmt.Errorf("only conversation created through nodes are allowed to be modified or deleted"))
 	}
 
-	dyConversation, existed, err := wf.GetRepository().GetDynamicConversationByName(ctx, env, *appID, connectorID, userID, conversationName)
+	dyConversation, existed, err := workflow.GetRepository().GetDynamicConversationByName(ctx, env, *appID, connectorID, userID, conversationName)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +109,7 @@ func (c *DeleteConversation) Delete(ctx context.Context, in map[string]any) (map
 		return nil, vo.WrapError(errno.ErrConversationOfAppNotFound, fmt.Errorf("the conversation name does not exist: '%v'", conversationName))
 	}
 
-	_, err = wf.GetRepository().DeleteDynamicConversation(ctx, env, dyConversation.ID)
+	_, err = workflow.GetRepository().DeleteDynamicConversation(ctx, env, dyConversation.ID)
 	if err != nil {
 		return nil, err
 	}

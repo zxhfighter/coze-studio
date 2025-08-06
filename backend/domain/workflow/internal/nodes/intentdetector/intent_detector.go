@@ -28,13 +28,16 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/spf13/cast"
 
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/model"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/canvas/convert"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/execute"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes"
 	nodesconversation "github.com/coze-dev/coze-studio/backend/domain/workflow/internal/nodes/conversation"
 	schema2 "github.com/coze-dev/coze-studio/backend/domain/workflow/internal/schema"
+	"github.com/coze-dev/coze-studio/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ternary"
 	"github.com/coze-dev/coze-studio/backend/pkg/logs"
 	"github.com/coze-dev/coze-studio/backend/pkg/sonic"
@@ -339,14 +342,38 @@ func (id *IntentDetector) ToCallbackInput(ctx context.Context, in map[string]any
 		return in, nil
 	}
 
-	historyMessages, err := nodesconversation.GetConversationHistoryFromCtx(ctx, id.ChatHistorySetting.ChatHistoryRound)
-	if err != nil {
-		logs.CtxErrorf(ctx, "failed to get conversation history: %v", err)
+	var messages []*conversation.Message
+	execCtx := execute.GetExeCtx(ctx)
+	if execCtx != nil {
+		messages = execCtx.ExeCfg.ConversationHistory
+	}
+
+	if len(messages) == 0 {
 		return in, nil
 	}
-	if historyMessages == nil {
-		return in, nil
+
+	count := 0
+	endIdx := 0
+	var historyMessages []any
+	for _, msg := range messages {
+		if count > int(id.ChatHistorySetting.ChatHistoryRound) {
+			break
+		}
+		if msg.Role == "user" {
+			count++
+		}
+		endIdx++
+		content, err := nodesconversation.ConvertMessageToString(ctx, msg)
+		if err != nil {
+			logs.CtxWarnf(ctx, "failed to convert message to string: %v", err)
+			continue
+		}
+		historyMessages = append(historyMessages, map[string]any{
+			"role":    msg.Role,
+			"content": content,
+		})
 	}
+	ctxcache.Store(ctx, chatHistoryKey, messages[:endIdx])
 
 	ret := map[string]any{
 		"chatHistory": historyMessages,

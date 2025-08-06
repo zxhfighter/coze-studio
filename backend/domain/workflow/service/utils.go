@@ -201,14 +201,14 @@ func isIncremental(prev version, next version) bool {
 	return next.Patch > prev.Patch
 }
 
-func GetAllNodesRecursively(ctx context.Context, wfEntity *entity.Workflow, repo wf.Repository) ([]*vo.Node, error) {
+func GetMaxHistoryRoundsRecursively(ctx context.Context, wfEntity *entity.Workflow, repo wf.Repository) (int64, error) {
 	visited := make(map[string]struct{})
-	allNodes := make([]*vo.Node, 0)
-	err := getAllNodesRecursiveHelper(ctx, wfEntity, repo, visited, &allNodes)
-	return allNodes, err
+	maxRounds := int64(0)
+	err := getMaxHistoryRoundsRecursiveHelper(ctx, wfEntity, repo, visited, &maxRounds)
+	return maxRounds, err
 }
 
-func getAllNodesRecursiveHelper(ctx context.Context, wfEntity *entity.Workflow, repo wf.Repository, visited map[string]struct{}, allNodes *[]*vo.Node) error {
+func getMaxHistoryRoundsRecursiveHelper(ctx context.Context, wfEntity *entity.Workflow, repo wf.Repository, visited map[string]struct{}, maxRounds *int64) error {
 	visitedKey := fmt.Sprintf("%d:%s", wfEntity.ID, wfEntity.GetVersion())
 	if _, ok := visited[visitedKey]; ok {
 		return nil
@@ -220,17 +220,55 @@ func getAllNodesRecursiveHelper(ctx context.Context, wfEntity *entity.Workflow, 
 		return fmt.Errorf("failed to unmarshal canvas for workflow %d: %w", wfEntity.ID, err)
 	}
 
-	return collectNodes(ctx, canvas.Nodes, repo, visited, allNodes)
+	return collectMaxHistoryRounds(ctx, canvas.Nodes, repo, visited, maxRounds)
 }
 
-func collectNodes(ctx context.Context, nodes []*vo.Node, repo wf.Repository, visited map[string]struct{}, allNodes *[]*vo.Node) error {
+func collectMaxHistoryRounds(ctx context.Context, nodes []*vo.Node, repo wf.Repository, visited map[string]struct{}, maxRounds *int64) error {
 	for _, node := range nodes {
 		if node == nil {
 			continue
 		}
-		*allNodes = append(*allNodes, node)
 
-		if node.Type == entity.NodeTypeSubWorkflow.IDStr() && node.Data != nil && node.Data.Inputs != nil {
+		if node.Data != nil && node.Data.Inputs != nil && node.Data.Inputs.ChatHistorySetting != nil && node.Data.Inputs.ChatHistorySetting.EnableChatHistory {
+			if node.Data.Inputs.ChatHistorySetting.ChatHistoryRound > *maxRounds {
+				*maxRounds = node.Data.Inputs.ChatHistorySetting.ChatHistoryRound
+			}
+		} else if node.Data != nil && node.Data.Inputs != nil && node.Data.Inputs.LLMParam != nil {
+			param := node.Data.Inputs.LLMParam
+			bs, _ := sonic.Marshal(param)
+			llmParam := make(vo.LLMParam, 0)
+			if err := sonic.Unmarshal(bs, &llmParam); err != nil {
+				return err
+			}
+			var chatHistoryEnabled bool
+			var chatHistoryRound int64
+			for _, param := range llmParam {
+				switch param.Name {
+				case "enableChatHistory":
+					if val, ok := param.Input.Value.Content.(bool); ok {
+						b := val
+						chatHistoryEnabled = b
+					}
+				case "chatHistoryRound":
+					if strVal, ok := param.Input.Value.Content.(string); ok {
+						int64Val, err := strconv.ParseInt(strVal, 10, 64)
+						if err != nil {
+							return err
+						}
+						chatHistoryRound = int64Val
+					}
+				}
+			}
+
+			if chatHistoryEnabled {
+				if chatHistoryRound > *maxRounds {
+					*maxRounds = chatHistoryRound
+				}
+			}
+		}
+
+		isSubWorkflow := node.Type == entity.NodeTypeSubWorkflow.IDStr() && node.Data != nil && node.Data.Inputs != nil
+		if isSubWorkflow {
 			workflowIDStr := node.Data.Inputs.WorkflowID
 			if workflowIDStr == "" {
 				continue
@@ -250,13 +288,13 @@ func collectNodes(ctx context.Context, nodes []*vo.Node, repo wf.Repository, vis
 				return fmt.Errorf("failed to get sub-workflow entity %d: %w", workflowID, err)
 			}
 
-			if err := getAllNodesRecursiveHelper(ctx, subWfEntity, repo, visited, allNodes); err != nil {
+			if err := getMaxHistoryRoundsRecursiveHelper(ctx, subWfEntity, repo, visited, maxRounds); err != nil {
 				return err
 			}
 		}
 
 		if len(node.Blocks) > 0 {
-			if err := collectNodes(ctx, node.Blocks, repo, visited, allNodes); err != nil {
+			if err := collectMaxHistoryRounds(ctx, node.Blocks, repo, visited, maxRounds); err != nil {
 				return err
 			}
 		}

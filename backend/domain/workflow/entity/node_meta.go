@@ -279,6 +279,7 @@ var NodeTypeMetas = map[NodeType]*NodeTypeMeta{
 			PostFillNil:      true,
 			InputSourceAware: true,
 			MayUseChatModel:  true,
+			UseCtxCache:      true,
 		},
 		EnUSName:        "LLM",
 		EnUSDescription: "Invoke the large language model, generate responses using variables and prompt words.",
@@ -331,6 +332,7 @@ var NodeTypeMetas = map[NodeType]*NodeTypeMeta{
 		ExecutableMeta: ExecutableMeta{
 			PreFillZero: true,
 			PostFillNil: true,
+			UseCtxCache: true,
 		},
 		EnUSName:        "Knowledge retrieval",
 		EnUSDescription: "In the selected knowledge, the best matching information is recalled based on the input variable and returned as an Array.",
@@ -494,6 +496,7 @@ var NodeTypeMetas = map[NodeType]*NodeTypeMeta{
 			PreFillZero:     true,
 			PostFillNil:     true,
 			MayUseChatModel: true,
+			UseCtxCache:     true,
 		},
 		EnUSName:        "Intent recognition",
 		EnUSDescription: "Used for recognizing the intent in user input and matching it with preset intent options.",
@@ -632,7 +635,6 @@ var NodeTypeMetas = map[NodeType]*NodeTypeMeta{
 		Color:        "#F2B600",
 		IconURL:      "https://lf3-static.bytednsdoc.com/obj/eden-cn/dvsmryvd_avi_dvsm/ljhwZthlaukjlkulzlp/icon/icon-Conversation-Create.jpeg",
 		SupportBatch: false,
-		Disabled:     true,
 		ExecutableMeta: ExecutableMeta{
 			PreFillZero: true,
 			PostFillNil: true,
