@@ -633,7 +633,7 @@ func (w *ApplicationService) OpenAPIChatFlowRun(ctx context.Context, req *workfl
 		}
 	}
 
-	userSchemaMessage, err := toSchemaMessage(lastUserMessage)
+	userSchemaMessage, err := w.toSchemaMessage(ctx, lastUserMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -844,7 +844,7 @@ func toConversationMessage(_ context.Context, appID int64, cid int64, userID int
 	}
 }
 
-func toSchemaMessage(msg *workflow.EnterMessage) (*schema.Message, error) {
+func (w *ApplicationService) toSchemaMessage(ctx context.Context, msg *workflow.EnterMessage) (*schema.Message, error) {
 	type content struct {
 		Type   string  `json:"type"`
 		FileID *string `json:"file_id"`
@@ -874,26 +874,39 @@ func toSchemaMessage(msg *workflow.EnterMessage) (*schema.Message, error) {
 					Text: *ct.Text,
 				})
 			} else if ct.FileID != nil {
+				uri := *ct.FileID
+				u, err := w.ImageX.GetResourceURL(ctx, uri)
+				if err != nil {
+					return nil, err
+				}
 				switch ct.Type {
 				case "file":
 					m.MultiContent = append(m.MultiContent, schema.ChatMessagePart{
 						Type: schema.ChatMessagePartTypeFileURL,
-						Text: *ct.Text,
+						FileURL: &schema.ChatMessageFileURL{
+							URL: u.URL,
+						},
 					})
 				case "image":
 					m.MultiContent = append(m.MultiContent, schema.ChatMessagePart{
 						Type: schema.ChatMessagePartTypeImageURL,
-						Text: *ct.Text,
+						ImageURL: &schema.ChatMessageImageURL{
+							URL: u.URL,
+						},
 					})
 				case "audio":
 					m.MultiContent = append(m.MultiContent, schema.ChatMessagePart{
 						Type: schema.ChatMessagePartTypeAudioURL,
-						Text: *ct.Text,
+						AudioURL: &schema.ChatMessageAudioURL{
+							URL: u.URL,
+						},
 					})
 				case "video":
 					m.MultiContent = append(m.MultiContent, schema.ChatMessagePart{
 						Type: schema.ChatMessagePartTypeVideoURL,
-						Text: *ct.Text,
+						VideoURL: &schema.ChatMessageVideoURL{
+							URL: u.URL,
+						},
 					})
 				}
 

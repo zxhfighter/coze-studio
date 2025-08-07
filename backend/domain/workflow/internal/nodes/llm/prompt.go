@@ -47,12 +47,25 @@ type promptsWithChatHistory struct {
 	cfg     *vo.ChatHistorySetting
 }
 
+func withReservedKeys(keys []string) func(tpl *promptTpl) {
+	return func(tpl *promptTpl) {
+		tpl.reservedKeys = keys
+	}
+}
+
+func withAssociateUserInputFields(fs map[string]struct{}) func(tpl *promptTpl) {
+	return func(tpl *promptTpl) {
+		tpl.associateUserInputFields = fs
+	}
+}
+
 type promptTpl struct {
-	role          schema.RoleType
-	tpl           string
-	parts         []promptPart
-	hasMultiModal bool
-	reservedKeys  []string
+	role                     schema.RoleType
+	tpl                      string
+	parts                    []promptPart
+	hasMultiModal            bool
+	reservedKeys             []string
+	associateUserInputFields map[string]struct{}
 }
 
 type promptPart struct {
@@ -63,10 +76,18 @@ type promptPart struct {
 func newPromptTpl(role schema.RoleType,
 	tpl string,
 	inputTypes map[string]*vo.TypeInfo,
-	reservedKeys []string,
+	opts ...func(*promptTpl),
 ) *promptTpl {
 	if len(tpl) == 0 {
 		return nil
+	}
+
+	pTpl := &promptTpl{
+		role: role,
+		tpl:  tpl,
+	}
+	for _, opt := range opts {
+		opt(pTpl)
 	}
 
 	parts := nodes.ParseTemplate(tpl)
@@ -96,14 +117,10 @@ func newPromptTpl(role schema.RoleType,
 
 		hasMultiModal = true
 	}
+	pTpl.parts = promptParts
+	pTpl.hasMultiModal = hasMultiModal
 
-	return &promptTpl{
-		role:          role,
-		tpl:           tpl,
-		parts:         promptParts,
-		hasMultiModal: hasMultiModal,
-		reservedKeys:  reservedKeys,
-	}
+	return pTpl
 }
 
 const sourceKey = "sources_%s"
@@ -127,19 +144,42 @@ func (pl *promptTpl) render(ctx context.Context, vs map[string]any,
 	sources map[string]*schema2.SourceInfo,
 	supportedModals map[modelmgr.Modal]bool,
 ) (*schema.Message, error) {
-	if !pl.hasMultiModal || len(supportedModals) == 0 {
-		var opts []nodes.RenderOption
-		if len(pl.reservedKeys) > 0 {
-			opts = append(opts, nodes.WithReservedKey(pl.reservedKeys...))
+	isChatFlow := execute.GetExeCtx(ctx).ExeCfg.WorkflowMode == workflow.WorkflowMode_ChatFlow
+	userMessage := execute.GetExeCtx(ctx).ExeCfg.UserMessage
+
+	if !isChatFlow {
+		if !pl.hasMultiModal || len(supportedModals) == 0 {
+			var opts []nodes.RenderOption
+			if len(pl.reservedKeys) > 0 {
+				opts = append(opts, nodes.WithReservedKey(pl.reservedKeys...))
+			}
+			r, err := nodes.Render(ctx, pl.tpl, vs, sources, opts...)
+			if err != nil {
+				return nil, err
+			}
+			return &schema.Message{
+				Role:    pl.role,
+				Content: r,
+			}, nil
 		}
-		r, err := nodes.Render(ctx, pl.tpl, vs, sources, opts...)
-		if err != nil {
-			return nil, err
+	} else {
+		if (!pl.hasMultiModal || len(supportedModals) == 0) &&
+			(len(pl.associateUserInputFields) == 0 ||
+				(len(pl.associateUserInputFields) > 0 && userMessage.MultiContent == nil)) {
+			var opts []nodes.RenderOption
+			if len(pl.reservedKeys) > 0 {
+				opts = append(opts, nodes.WithReservedKey(pl.reservedKeys...))
+			}
+			r, err := nodes.Render(ctx, pl.tpl, vs, sources, opts...)
+			if err != nil {
+				return nil, err
+			}
+			return &schema.Message{
+				Role:    pl.role,
+				Content: r,
+			}, nil
 		}
-		return &schema.Message{
-			Role:    pl.role,
-			Content: r,
-		}, nil
+
 	}
 
 	multiParts := make([]schema.ChatMessagePart, 0, len(pl.parts))
@@ -154,6 +194,13 @@ func (pl *promptTpl) render(ctx context.Context, vs map[string]any,
 				Type: schema.ChatMessagePartTypeText,
 				Text: part.part.Value,
 			})
+			continue
+		}
+
+		if _, ok := pl.associateUserInputFields[part.part.Value]; ok && userMessage != nil && isChatFlow {
+			for _, p := range userMessage.MultiContent {
+				multiParts = append(multiParts, p)
+			}
 			continue
 		}
 

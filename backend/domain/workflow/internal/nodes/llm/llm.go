@@ -169,13 +169,14 @@ type KnowledgeRecallConfig struct {
 }
 
 type Config struct {
-	SystemPrompt       string
-	UserPrompt         string
-	OutputFormat       Format
-	LLMParams          *crossmodel.LLMParams
-	FCParam            *vo.FCParam
-	BackupLLMParams    *crossmodel.LLMParams
-	ChatHistorySetting *vo.ChatHistorySetting
+	SystemPrompt                      string
+	UserPrompt                        string
+	OutputFormat                      Format
+	LLMParams                         *crossmodel.LLMParams
+	FCParam                           *vo.FCParam
+	BackupLLMParams                   *crossmodel.LLMParams
+	ChatHistorySetting                *vo.ChatHistorySetting
+	AssociateStartNodeUserInputFields map[string]struct{}
 }
 
 func (c *Config) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*schema2.NodeSchema, error) {
@@ -280,6 +281,15 @@ func (c *Config) Adapt(_ context.Context, n *vo.Node, _ ...nodes.AdaptOption) (*
 				return nil, err
 			}
 			c.BackupLLMParams = backupModel
+		}
+	}
+
+	c.AssociateStartNodeUserInputFields = make(map[string]struct{})
+	for _, info := range ns.InputSources {
+		if len(info.Path) == 1 && info.Source.Ref != nil && info.Source.Ref.FromNodeKey == entity.EntryNodeKey {
+			if compose.FromFieldPath(info.Source.Ref.FromPath).Equals(compose.FromField("USER_INPUT")) {
+				c.AssociateStartNodeUserInputFields[info.Path[0]] = struct{}{}
+			}
 		}
 	}
 
@@ -608,8 +618,8 @@ func (c *Config) Build(ctx context.Context, ns *schema2.NodeSchema, _ ...schema2
 		inputs[knowledgeUserPromptTemplateKey] = &vo.TypeInfo{
 			Type: vo.DataTypeString,
 		}
-		sp := newPromptTpl(schema.System, c.SystemPrompt, inputs, nil)
-		up := newPromptTpl(schema.User, userPrompt, inputs, []string{knowledgeUserPromptTemplateKey})
+		sp := newPromptTpl(schema.System, c.SystemPrompt, inputs)
+		up := newPromptTpl(schema.User, userPrompt, inputs, withReservedKeys([]string{knowledgeUserPromptTemplateKey}), withAssociateUserInputFields(c.AssociateStartNodeUserInputFields))
 		template := newPrompts(sp, up, modelWithInfo)
 		templateWithChatHistory := newPromptsWithChatHistory(template, c.ChatHistorySetting)
 
@@ -623,8 +633,8 @@ func (c *Config) Build(ctx context.Context, ns *schema2.NodeSchema, _ ...schema2
 		_ = g.AddEdge(knowledgeLambdaKey, templateNodeKey)
 
 	} else {
-		sp := newPromptTpl(schema.System, c.SystemPrompt, ns.InputTypes, nil)
-		up := newPromptTpl(schema.User, userPrompt, ns.InputTypes, nil)
+		sp := newPromptTpl(schema.System, c.SystemPrompt, ns.InputTypes)
+		up := newPromptTpl(schema.User, userPrompt, ns.InputTypes, withAssociateUserInputFields(c.AssociateStartNodeUserInputFields))
 		template := newPrompts(sp, up, modelWithInfo)
 		templateWithChatHistory := newPromptsWithChatHistory(template, c.ChatHistorySetting)
 
