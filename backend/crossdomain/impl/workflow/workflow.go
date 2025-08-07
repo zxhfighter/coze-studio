@@ -99,7 +99,3 @@ func (i *impl) GetWorkflowIDsByAppID(ctx context.Context, appID int64) ([]int64,
 		return a.ID
 	}), err
 }
-
-func (i *impl) InitApplicationDefaultConversationTemplate(ctx context.Context, spaceID int64, appID int64, userID int64) error {
-	return i.DomainSVC.InitApplicationDefaultConversationTemplate(ctx, spaceID, appID, userID)
-}
