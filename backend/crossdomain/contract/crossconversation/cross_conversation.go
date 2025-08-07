@@ -27,6 +27,7 @@ type Conversation interface {
 	GetCurrentConversation(ctx context.Context, req *conversation.GetCurrent) (*conversation.Conversation, error)
 	Create(ctx context.Context, req *entity.CreateMeta) (*entity.Conversation, error)
 	NewConversationCtx(ctx context.Context, req *entity.NewConversationCtxRequest) (*entity.NewConversationCtxResponse, error)
+	GetByID(ctx context.Context, id int64) (*entity.Conversation, error)
 }
 
 var defaultSVC Conversation

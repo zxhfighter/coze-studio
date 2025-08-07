@@ -49,3 +49,7 @@ func (s *impl) Create(ctx context.Context, req *entity.CreateMeta) (*entity.Conv
 func (s *impl) NewConversationCtx(ctx context.Context, req *entity.NewConversationCtxRequest) (*entity.NewConversationCtxResponse, error) {
 	return s.DomainSVC.NewConversationCtx(ctx, req)
 }
+
+func (s *impl) GetByID(ctx context.Context, id int64) (*entity.Conversation, error) {
+	return s.DomainSVC.GetByID(ctx, id)
+}

@@ -28,6 +28,7 @@ import (
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
 	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/application/base/ctxutil"
+	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossconversation"
 	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossmessage"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
@@ -778,9 +779,15 @@ func (w *ApplicationService) OpenAPICreateConversation(ctx context.Context, req 
 		return nil, err
 	}
 
+	cInfo, err := crossconversation.DefaultSVC().GetByID(ctx, cID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &workflow.CreateConversationResponse{
 		ConversationData: &workflow.ConversationData{
-			Id: cID,
+			Id:            cID,
+			LastSectionID: ptr.Of(cInfo.SectionID),
 		},
 	}, nil
 }
