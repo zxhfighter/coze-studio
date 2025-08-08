@@ -491,12 +491,15 @@ func (w *ApplicationService) OpenAPIChatFlowRun(ctx context.Context, req *workfl
 	}
 
 	var (
-		isDebug                             = req.GetExecuteMode() == "DEBUG"
-		appID, agentID                      *int64
-		resolveAppID                        int64
-		connectorID, userID, conversationID int64
-		version                             string
-		locator                             vo.Locator
+		isDebug        = req.GetExecuteMode() == "DEBUG"
+		appID, agentID *int64
+		resolveAppID   int64
+		conversationID int64
+		version        string
+		locator        vo.Locator
+		apiKeyInfo     = ctxutil.GetApiAuthFromCtx(ctx)
+		userID         = apiKeyInfo.UserID
+		connectorID    = apiKeyInfo.ConnectorID
 	)
 	if req.IsSetAppID() {
 		appID = ptr.Of(mustParseInt64(req.GetAppID()))
@@ -512,14 +515,8 @@ func (w *ApplicationService) OpenAPIChatFlowRun(ctx context.Context, req *workfl
 	}
 
 	if isDebug {
-		userID = ctxutil.MustGetUIDFromCtx(ctx)
-		connectorID = mustParseInt64(req.GetConnectorID())
 		locator = vo.FromDraft
-
 	} else {
-		apiKeyInfo := ctxutil.GetApiAuthFromCtx(ctx)
-		userID = apiKeyInfo.UserID
-		connectorID = apiKeyInfo.ConnectorID
 		meta, err := GetWorkflowDomainSVC().Get(ctx, &vo.GetPolicy{
 			ID:       mustParseInt64(req.GetWorkflowID()),
 			MetaOnly: true,
@@ -761,10 +758,11 @@ func (w *ApplicationService) OpenAPICreateConversation(ctx context.Context, req 
 	}()
 
 	var (
-		appID  = mustParseInt64(req.GetAppID())
-		userID = ctxutil.MustGetUIDFromCtx(ctx)
-		env    = ternary.IFElse(req.GetDraftMode(), vo.Draft, vo.Online)
-		cID    int64
+		appID      = mustParseInt64(req.GetAppID())
+		apiKeyInfo = ctxutil.GetApiAuthFromCtx(ctx)
+		userID     = apiKeyInfo.UserID
+		env        = ternary.IFElse(req.GetDraftMode(), vo.Draft, vo.Online)
+		cID        int64
 		//spaceID = mustParseInt64(req.GetSpaceID())
 		//_       = spaceID
 	)

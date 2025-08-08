@@ -76,11 +76,13 @@ func staticFileRegister(r *server.Hertz) {
 	})
 
 	r.Handle(http.MethodPost, "api/permission_api/coze_web_app/impersonate_coze_user", func(c context.Context, ctx *app.RequestContext) {
+		access_token := os.Getenv("ACCESS_TOKEN")
+
 		ctx.JSON(200, map[string]any{
 			"code": 0,
 			"msg":  "ok",
 			"data": map[string]interface{}{
-				"access_token": "pat_5732f3b083385561af45c67ac93ab67ff41e81dd82b27d4581688237841d81af",
+				"access_token": access_token,
 				"expires_in":   1753998220,
 				"token_type":   "Bearer",
 			},
