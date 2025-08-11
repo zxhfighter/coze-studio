@@ -14,28 +14,27 @@
  * limitations under the License.
  */
 
-package crossdatacopy
+package knowledge
 
 import (
 	"context"
 
-	"gorm.io/gorm"
-
-	"github.com/coze-dev/coze-studio/backend/domain/datacopy"
+	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/knowledge"
 )
 
-type DataCopy interface {
-	CheckAndGenCopyTask(ctx context.Context, req *datacopy.CheckAndGenCopyTaskReq) (*datacopy.CheckAndGenCopyTaskResp, error)
-	UpdateCopyTask(ctx context.Context, req *datacopy.UpdateCopyTaskReq) error
-	UpdateCopyTaskWithTX(ctx context.Context, req *datacopy.UpdateCopyTaskReq, tx *gorm.DB) error
+type Knowledge interface {
+	ListKnowledge(ctx context.Context, request *knowledge.ListKnowledgeRequest) (response *knowledge.ListKnowledgeResponse, err error)
+	GetKnowledgeByID(ctx context.Context, request *knowledge.GetKnowledgeByIDRequest) (response *knowledge.GetKnowledgeByIDResponse, err error)
+	Retrieve(ctx context.Context, req *knowledge.RetrieveRequest) (*knowledge.RetrieveResponse, error)
+	DeleteKnowledge(ctx context.Context, request *knowledge.DeleteKnowledgeRequest) error
 }
 
-var defaultSVC DataCopy
+var defaultSVC Knowledge
 
-func DefaultSVC() DataCopy {
+func DefaultSVC() Knowledge {
 	return defaultSVC
 }
 
-func SetDefaultSVC(c DataCopy) {
+func SetDefaultSVC(c Knowledge) {
 	defaultSVC = c
 }

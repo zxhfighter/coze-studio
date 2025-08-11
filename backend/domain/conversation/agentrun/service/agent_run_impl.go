@@ -38,10 +38,10 @@ import (
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/agentrun"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/singleagent"
+	crossagent "github.com/coze-dev/coze-studio/backend/crossdomain/contract/agent"
+	crossmessage "github.com/coze-dev/coze-studio/backend/crossdomain/contract/message"
+	crossworkflow "github.com/coze-dev/coze-studio/backend/crossdomain/contract/workflow"
 
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossagent"
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossmessage"
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossworkflow"
 	"github.com/coze-dev/coze-studio/backend/domain/conversation/agentrun/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/conversation/agentrun/internal"
 	"github.com/coze-dev/coze-studio/backend/domain/conversation/agentrun/repository"

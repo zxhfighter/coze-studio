@@ -14,26 +14,24 @@
  * limitations under the License.
  */
 
-package crossconnector
+package search
 
 import (
 	"context"
 
-	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/connector"
+	model "github.com/coze-dev/coze-studio/backend/api/model/crossdomain/search"
 )
 
-type Connector interface {
-	List(ctx context.Context) ([]*connector.Connector, error)
-	GetByIDs(ctx context.Context, ids []int64) (map[int64]*connector.Connector, error)
-	GetByID(ctx context.Context, id int64) (*connector.Connector, error)
+type Search interface {
+	SearchResources(ctx context.Context, req *model.SearchResourcesRequest) (resp *model.SearchResourcesResponse, err error)
 }
 
-var defaultSVC Connector
+var defaultSVC Search
 
-func DefaultSVC() Connector {
+func DefaultSVC() Search {
 	return defaultSVC
 }
 
-func SetDefaultSVC(c Connector) {
-	defaultSVC = c
+func SetDefaultSVC(svc Search) {
+	defaultSVC = svc
 }

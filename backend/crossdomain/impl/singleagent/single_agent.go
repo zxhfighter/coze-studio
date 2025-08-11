@@ -23,7 +23,7 @@ import (
 
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/agentrun"
 	model "github.com/coze-dev/coze-studio/backend/api/model/crossdomain/singleagent"
-	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossagent"
+	crossagent "github.com/coze-dev/coze-studio/backend/crossdomain/contract/agent"
 	singleagent "github.com/coze-dev/coze-studio/backend/domain/agent/singleagent/service"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/slices"
