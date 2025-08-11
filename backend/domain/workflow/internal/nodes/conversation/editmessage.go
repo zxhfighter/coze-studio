@@ -66,7 +66,7 @@ func (e *EditMessageConfig) Build(_ context.Context, ns *schema.NodeSchema, _ ..
 	}, nil
 }
 
-func (e *EditMessage) Edit(ctx context.Context, input map[string]any) (map[string]any, error) {
+func (e *EditMessage) Invoke(ctx context.Context, input map[string]any) (map[string]any, error) {
 	var (
 		execCtx     = execute.GetExeCtx(ctx)
 		env         = ternary.IFElse(execCtx.ExeCfg.Mode == vo.ExecuteModeRelease, vo.Online, vo.Draft)
@@ -139,7 +139,7 @@ func (e *EditMessage) Edit(ctx context.Context, input map[string]any) (map[strin
 			return failedMap, nil
 		}
 
-		err = e.Manager.DeleteMessage(ctx, &conversation.DeleteMessageRequest{ConversationID: sts.ConversationID, MessageID: messageID})
+		err = e.Manager.EditMessage(ctx, &conversation.EditMessageRequest{ConversationID: sts.ConversationID, MessageID: messageID, Content: newContent})
 		if err != nil {
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}
