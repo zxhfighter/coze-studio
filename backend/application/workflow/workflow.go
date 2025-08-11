@@ -4062,7 +4062,11 @@ func (w *ApplicationService) OpenAPIGetWorkflowInfo(ctx context.Context, req *wo
 
 	var version string
 	if wf.Meta.AppID != nil {
-		version = "" // TODO : search version from DB using AppID
+		if vl, err := GetWorkflowDomainSVC().GetWorkflowVersionsByConnector(ctx, mustParseInt64(req.GetConnectorID()), wf.ID, 1); err != nil {
+			return nil, err
+		} else if len(vl) > 0 {
+			version = vl[0]
+		}
 	}
 
 	role, err := GetWorkflowDomainSVC().GetChatFlowRole(ctx, mustParseInt64(req.WorkflowID), version)
