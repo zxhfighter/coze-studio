@@ -33,11 +33,12 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/mohae/deepcopy"
 
+	"github.com/coze-dev/coze-studio/backend/api/model/app/bot_common"
 	messageModel "github.com/coze-dev/coze-studio/backend/api/model/conversation/message"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/agentrun"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/singleagent"
-	"github.com/coze-dev/coze-studio/backend/api/model/ocean/cloud/bot_common"
+
 	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossagent"
 	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossmessage"
 	"github.com/coze-dev/coze-studio/backend/crossdomain/contract/crossworkflow"
@@ -179,7 +180,7 @@ func (c *runImpl) handlerWfAsAgentStreamExecute(ctx context.Context, sw *schema.
 		BizType:      crossworkflow.BizTypeAgent,
 		SyncPattern:  crossworkflow.SyncPatternStream,
 	}, map[string]any{
-		"input": "你有什么功能？",
+		"input": concatWfInput(rtDependence),
 	})
 	mainChan := make(chan *entity.AgentRespEvent, 100)
 
@@ -195,6 +196,20 @@ func (c *runImpl) handlerWfAsAgentStreamExecute(ctx context.Context, sw *schema.
 	})
 	wg.Wait()
 	return err
+}
+
+func concatWfInput(rtDependence *runtimeDependence) string {
+	var input string
+	for _, content := range rtDependence.runMeta.Content {
+		if content.Type == message.InputTypeText {
+			input = content.Text + "," + input
+		} else {
+			for _, file := range content.FileData {
+				input += file.Url + ","
+			}
+		}
+	}
+	return input
 }
 
 func (c *runImpl) handlerAgentStreamExecute(ctx context.Context, sw *schema.StreamWriter[*entity.AgentRunResponse], historyMsg []*msgEntity.Message, input *msgEntity.Message, rtDependence *runtimeDependence) (err error) {
@@ -490,6 +505,7 @@ func (c *runImpl) pullWfStream(ctx context.Context, mainChan chan *entity.AgentR
 			mainChan <- errChunk
 			return
 		}
+
 	}
 }
 func (c *runImpl) pull(_ context.Context, mainChan chan *entity.AgentRespEvent, events *schema.StreamReader[*crossagent.AgentEvent]) {

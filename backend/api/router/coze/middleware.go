@@ -1505,3 +1505,13 @@ func _upload1Mw() []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _coze_web_appMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _impersonatecozeuserMw() []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -251,6 +251,10 @@ func Register(r *server.Hertz) {
 		{
 			_permission_api := _api.Group("/permission_api", _permission_apiMw()...)
 			{
+				_coze_web_app := _permission_api.Group("/coze_web_app", _coze_web_appMw()...)
+				_coze_web_app.POST("/impersonate_coze_user", append(_impersonatecozeuserMw(), coze.ImpersonateCozeUser)...)
+			}
+			{
 				_pat := _permission_api.Group("/pat", _patMw()...)
 				_pat.POST("/create_personal_access_token_and_permission", append(_createpersonalaccesstokenandpermissionMw(), coze.CreatePersonalAccessTokenAndPermission)...)
 				_pat.POST("/delete_personal_access_token_and_permission", append(_deletepersonalaccesstokenandpermissionMw(), coze.DeletePersonalAccessTokenAndPermission)...)
