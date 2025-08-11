@@ -171,7 +171,7 @@ func convertMessage(msgs []*msgentity.Message) ([]*conversation.Message, error) 
 	for _, m := range msgs {
 		msg := &conversation.Message{
 			ID:          m.ID,
-			Role:        string(m.Role),
+			Role:        m.Role,
 			ContentType: string(m.ContentType)}
 
 		if m.MultiContent != nil {
@@ -180,13 +180,13 @@ func convertMessage(msgs []*msgentity.Message) ([]*conversation.Message, error) 
 				if c.FileData != nil {
 					for _, fd := range c.FileData {
 						mcs = append(mcs, &conversation.Content{
-							Type: string(c.Type),
+							Type: c.Type,
 							Uri:  ptr.Of(fd.URI),
 						})
 					}
 				} else {
 					mcs = append(mcs, &conversation.Content{
-						Type: string(c.Type),
+						Type: c.Type,
 						Text: ptr.Of(c.Text),
 					})
 				}

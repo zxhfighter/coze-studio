@@ -359,7 +359,7 @@ func (id *IntentDetector) ToCallbackInput(ctx context.Context, in map[string]any
 		if count > int(id.ChatHistorySetting.ChatHistoryRound) {
 			break
 		}
-		if msg.Role == "user" {
+		if msg.Role == schema.User {
 			count++
 		}
 		endIdx++
@@ -369,7 +369,7 @@ func (id *IntentDetector) ToCallbackInput(ctx context.Context, in map[string]any
 			continue
 		}
 		historyMessages = append(historyMessages, map[string]any{
-			"role":    msg.Role,
+			"role":    string(msg.Role),
 			"content": content,
 		})
 	}

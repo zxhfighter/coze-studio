@@ -173,7 +173,7 @@ func (ch *ConversationHistory) Invoke(ctx context.Context, input map[string]any)
 			return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
 		}
 		messageList = append(messageList, map[string]any{
-			"role":    msg.Role,
+			"role":    string(msg.Role),
 			"content": content,
 		})
 	}

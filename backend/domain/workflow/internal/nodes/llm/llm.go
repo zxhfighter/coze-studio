@@ -1245,7 +1245,7 @@ func (l *LLM) ToCallbackInput(ctx context.Context, input map[string]any) (map[st
 		if count > int(l.chatHistorySetting.ChatHistoryRound) {
 			break
 		}
-		if msg.Role == "user" {
+		if msg.Role == schema.User {
 			count++
 		}
 		endIdx++
@@ -1255,7 +1255,7 @@ func (l *LLM) ToCallbackInput(ctx context.Context, input map[string]any) (map[st
 			continue
 		}
 		historyMessages = append(historyMessages, map[string]any{
-			"role":    msg.Role,
+			"role":    string(msg.Role),
 			"content": content,
 		})
 	}

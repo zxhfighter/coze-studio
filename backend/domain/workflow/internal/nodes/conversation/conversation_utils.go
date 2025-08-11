@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/eino/schema"
+	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/entity/vo"
@@ -66,12 +67,12 @@ func ConvertMessageToSchema(ctx context.Context, msg *conversation.Message) (*sc
 	schemaMsg := &schema.Message{}
 
 	switch msg.Role {
-	case "user":
+	case schema.User:
 		schemaMsg.Role = schema.User
-	case "assistant":
+	case schema.Assistant:
 		schemaMsg.Role = schema.Assistant
 	default:
-		return nil, fmt.Errorf("unknown role: %s", msg.Role)
+		return nil, fmt.Errorf("unknown role: %s", string(msg.Role))
 	}
 
 	if msg.Text != nil {
@@ -104,34 +105,34 @@ func convertContentPart(ctx context.Context, part *conversation.Content) (schema
 	}
 
 	switch part.Type {
-	case "text":
+	case message.InputTypeText:
 		schemaPart.Type = schema.ChatMessagePartTypeText
 		if part.Text == nil || *part.Text == "" {
 			return schema.ChatMessagePart{}, fmt.Errorf("text is empty for text content part type")
 		}
 		schemaPart.Text = *part.Text
-	case "image":
+	case message.InputTypeImage:
 		schemaPart.Type = schema.ChatMessagePartTypeImageURL
 		url, err := workflow.GetRepository().GetObjectUrl(ctx, uri)
 		if err != nil {
 			return schema.ChatMessagePart{}, fmt.Errorf("failed to get object url: %w", err)
 		}
 		schemaPart.ImageURL = &schema.ChatMessageImageURL{URL: url}
-	case "audio":
+	case message.InputTypeAudio:
 		schemaPart.Type = schema.ChatMessagePartTypeAudioURL
 		url, err := workflow.GetRepository().GetObjectUrl(ctx, uri)
 		if err != nil {
 			return schema.ChatMessagePart{}, fmt.Errorf("failed to get object url: %w", err)
 		}
 		schemaPart.AudioURL = &schema.ChatMessageAudioURL{URL: url}
-	case "video":
+	case message.InputTypeVideo:
 		schemaPart.Type = schema.ChatMessagePartTypeVideoURL
 		url, err := workflow.GetRepository().GetObjectUrl(ctx, uri)
 		if err != nil {
 			return schema.ChatMessagePart{}, fmt.Errorf("failed to get object url: %w", err)
 		}
 		schemaPart.VideoURL = &schema.ChatMessageVideoURL{URL: url}
-	case "file":
+	case message.InputTypeFile:
 		schemaPart.Type = schema.ChatMessagePartTypeFileURL
 		url, err := workflow.GetRepository().GetObjectUrl(ctx, uri)
 		if err != nil {

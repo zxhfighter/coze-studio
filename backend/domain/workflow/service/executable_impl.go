@@ -307,6 +307,23 @@ func (i *impl) AsyncExecuteNode(ctx context.Context, nodeID string, config vo.Ex
 		}
 	}
 
+	historyRounds := int64(0)
+	if config.WorkflowMode == workflow1.WorkflowMode_ChatFlow {
+		historyRounds, err = getHistoryRoundsFromNode(ctx, wfEntity, nodeID, i.repo)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	if historyRounds > 0 {
+		messages, err := i.prefetchChatHistory(ctx, config, historyRounds)
+		if err != nil {
+			logs.CtxErrorf(ctx, "failed to prefetch chat history: %v", err)
+		} else if len(messages) > 0 {
+			config.ConversationHistory = messages
+		}
+	}
+
 	c := &vo.Canvas{}
 	if err = sonic.UnmarshalString(wfEntity.Canvas, c); err != nil {
 		return 0, fmt.Errorf("failed to unmarshal canvas: %w", err)
@@ -973,7 +990,7 @@ func (i *impl) calculateMaxChatHistoryRounds(ctx context.Context, wfEntity *enti
 		return 0, nil
 	}
 
-	maxRounds, err := GetMaxHistoryRoundsRecursively(ctx, wfEntity, repo)
+	maxRounds, err := getMaxHistoryRoundsRecursively(ctx, wfEntity, repo)
 	if err != nil {
 		return 0, err
 	}

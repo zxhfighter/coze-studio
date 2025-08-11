@@ -193,7 +193,7 @@ func (m *MessageList) Invoke(ctx context.Context, input map[string]any) (map[str
 		}
 		messageList = append(messageList, map[string]any{
 			"messageId":   strconv.FormatInt(msg.ID, 10),
-			"role":        msg.Role,
+			"role":        string(msg.Role),
 			"contentType": msg.ContentType,
 			"content":     content,
 		})

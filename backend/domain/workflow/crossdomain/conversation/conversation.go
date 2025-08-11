@@ -18,6 +18,9 @@ package conversation
 
 import (
 	"context"
+
+	"github.com/cloudwego/eino/schema"
+	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
 )
 
 type CreateConversationRequest struct {
@@ -71,17 +74,17 @@ type ConversationHistoryRequest struct {
 }
 
 type Content struct {
-	Type string  `json:"type"`
-	Text *string `json:"text,omitempty"`
-	Uri  *string `json:"uri,omitempty"`
+	Type message.InputType `json:"type"`
+	Text *string           `json:"text,omitempty"`
+	Uri  *string           `json:"uri,omitempty"`
 }
 
 type Message struct {
 	ID           int64
-	Role         string     `json:"role"` // user or assistant
-	MultiContent []*Content `json:"multi_content"`
-	Text         *string    `json:"text,omitempty"`
-	ContentType  string     `json:"content_type"`
+	Role         schema.RoleType `json:"role"` // user or assistant
+	MultiContent []*Content      `json:"multi_content"`
+	Text         *string         `json:"text,omitempty"`
+	ContentType  string          `json:"content_type"`
 }
 
 type ConversationHistoryResponse struct {

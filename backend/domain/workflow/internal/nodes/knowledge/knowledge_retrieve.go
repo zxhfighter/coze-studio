@@ -269,7 +269,7 @@ func (kr *Retrieve) ToCallbackInput(ctx context.Context, in map[string]any) (map
 		if count > int(kr.ChatHistorySetting.ChatHistoryRound) {
 			break
 		}
-		if msg.Role == "user" {
+		if msg.Role == einoSchema.User {
 			count++
 		}
 		endIdx++
@@ -279,7 +279,7 @@ func (kr *Retrieve) ToCallbackInput(ctx context.Context, in map[string]any) (map
 			continue
 		}
 		historyMessages = append(historyMessages, map[string]any{
-			"role":    msg.Role,
+			"role":    string(msg.Role),
 			"content": content,
 		})
 	}

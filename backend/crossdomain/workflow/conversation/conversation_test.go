@@ -19,6 +19,7 @@ package conversation
 import (
 	"testing"
 
+	"github.com/cloudwego/eino/schema"
 	apimessage "github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
 	"github.com/coze-dev/coze-studio/backend/domain/conversation/message/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
@@ -43,7 +44,7 @@ func Test_convertMessage(t *testing.T) {
 					Messages: []*entity.Message{
 						{
 							ID:          1,
-							Role:        "user",
+							Role:        schema.User,
 							ContentType: "text",
 							MultiContent: []*apimessage.InputMetaData{
 								{
@@ -59,7 +60,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          1,
-						Role:        "user",
+						Role:        schema.User,
 						ContentType: "text",
 						MultiContent: []*conversation.Content{
 							{Type: "text", Text: ptr.Of("hello")},
@@ -75,14 +76,14 @@ func Test_convertMessage(t *testing.T) {
 					Messages: []*entity.Message{
 						{
 							ID:          2,
-							Role:        "user",
+							Role:        schema.User,
 							ContentType: "file",
 							MultiContent: []*apimessage.InputMetaData{
 								{
 									Type: "file",
 									FileData: []*apimessage.FileData{
 										{
-											Url: "f_uri_1",
+											URI: "f_uri_1",
 										},
 									},
 								},
@@ -99,7 +100,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          2,
-						Role:        "user",
+						Role:        schema.User,
 						ContentType: "file",
 						MultiContent: []*conversation.Content{
 							{Type: "file", Uri: ptr.Of("f_uri_1")},
@@ -116,7 +117,7 @@ func Test_convertMessage(t *testing.T) {
 					Messages: []*entity.Message{
 						{
 							ID:          3,
-							Role:        "user",
+							Role:        schema.User,
 							ContentType: "text_file",
 							MultiContent: []*apimessage.InputMetaData{
 								{
@@ -127,7 +128,7 @@ func Test_convertMessage(t *testing.T) {
 									Type: "file",
 									FileData: []*apimessage.FileData{
 										{
-											Url: "f_uri_2",
+											URI: "f_uri_2",
 										},
 									},
 								},
@@ -140,7 +141,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          3,
-						Role:        "user",
+						Role:        schema.User,
 						ContentType: "text_file",
 						MultiContent: []*conversation.Content{
 							{Type: "text", Text: ptr.Of("hello")},
@@ -157,17 +158,17 @@ func Test_convertMessage(t *testing.T) {
 					Messages: []*entity.Message{
 						{
 							ID:          4,
-							Role:        "user",
+							Role:        schema.User,
 							ContentType: "file",
 							MultiContent: []*apimessage.InputMetaData{
 								{
 									Type: "file",
 									FileData: []*apimessage.FileData{
 										{
-											Url: "f_uri_3",
+											URI: "f_uri_3",
 										},
 										{
-											Url: "f_uri_4",
+											URI: "f_uri_4",
 										},
 									},
 								},
@@ -184,7 +185,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          4,
-						Role:        "user",
+						Role:        schema.User,
 						ContentType: "file",
 						MultiContent: []*conversation.Content{
 							{Type: "file", Uri: ptr.Of("f_uri_3")},
@@ -202,7 +203,7 @@ func Test_convertMessage(t *testing.T) {
 					Messages: []*entity.Message{
 						{
 							ID:          5,
-							Role:        "user",
+							Role:        schema.User,
 							ContentType: "text",
 							MultiContent: []*apimessage.InputMetaData{
 								{
@@ -218,7 +219,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          5,
-						Role:        "user",
+						Role:        schema.User,
 						ContentType: "text",
 						MultiContent: []*conversation.Content{
 							{Type: "text", Text: ptr.Of("")},
@@ -234,14 +235,14 @@ func Test_convertMessage(t *testing.T) {
 					Messages: []*entity.Message{
 						{
 							ID:          6,
-							Role:        "user",
+							Role:        schema.User,
 							ContentType: "image",
 							MultiContent: []*apimessage.InputMetaData{
 								{
 									Type: "image",
 									FileData: []*apimessage.FileData{
 										{
-											Url: "image_uri_5",
+											URI: "image_uri_5",
 										},
 									},
 								},
@@ -258,7 +259,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          6,
-						Role:        "user",
+						Role:        schema.User,
 						ContentType: "image",
 						MultiContent: []*conversation.Content{
 							{Type: "image", Uri: ptr.Of("image_uri_5")},
@@ -275,17 +276,17 @@ func Test_convertMessage(t *testing.T) {
 					Messages: []*entity.Message{
 						{
 							ID:          7,
-							Role:        "user",
+							Role:        schema.User,
 							ContentType: "image",
 							MultiContent: []*apimessage.InputMetaData{
 								{
 									Type: "image",
 									FileData: []*apimessage.FileData{
 										{
-											Url: "file_id_6",
+											URI: "file_id_6",
 										},
 										{
-											Url: "file_id_7",
+											URI: "file_id_7",
 										},
 									},
 								},
@@ -302,7 +303,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          7,
-						Role:        "user",
+						Role:        schema.User,
 						ContentType: "image",
 						MultiContent: []*conversation.Content{
 							{Type: "image", Uri: ptr.Of("file_id_6")},
@@ -320,7 +321,7 @@ func Test_convertMessage(t *testing.T) {
 					Messages: []*entity.Message{
 						{
 							ID:          8,
-							Role:        "user",
+							Role:        schema.User,
 							ContentType: "mix",
 							MultiContent: []*apimessage.InputMetaData{
 								{
@@ -331,7 +332,7 @@ func Test_convertMessage(t *testing.T) {
 									Type: "image",
 									FileData: []*apimessage.FileData{
 										{
-											Url: "file_id_8",
+											URI: "file_id_8",
 										},
 									},
 								},
@@ -339,7 +340,7 @@ func Test_convertMessage(t *testing.T) {
 									Type: "file",
 									FileData: []*apimessage.FileData{
 										{
-											Url: "file_id_9",
+											URI: "file_id_9",
 										},
 									},
 								},
@@ -352,7 +353,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          8,
-						Role:        "user",
+						Role:        schema.User,
 						ContentType: "mix",
 						MultiContent: []*conversation.Content{
 							{Type: "text", Text: ptr.Of("hello")},

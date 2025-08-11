@@ -201,7 +201,7 @@ func isIncremental(prev version, next version) bool {
 	return next.Patch > prev.Patch
 }
 
-func GetMaxHistoryRoundsRecursively(ctx context.Context, wfEntity *entity.Workflow, repo wf.Repository) (int64, error) {
+func getMaxHistoryRoundsRecursively(ctx context.Context, wfEntity *entity.Workflow, repo wf.Repository) (int64, error) {
 	visited := make(map[string]struct{})
 	maxRounds := int64(0)
 	err := getMaxHistoryRoundsRecursiveHelper(ctx, wfEntity, repo, visited, &maxRounds)
@@ -301,4 +301,113 @@ func collectMaxHistoryRounds(ctx context.Context, nodes []*vo.Node, repo wf.Repo
 	}
 
 	return nil
+}
+
+func getHistoryRoundsFromNode(ctx context.Context, wfEntity *entity.Workflow, nodeID string, repo wf.Repository) (int64, error) {
+	if wfEntity == nil {
+		return 0, nil
+	}
+	visited := make(map[string]struct{})
+	visitedKey := fmt.Sprintf("%d:%s", wfEntity.ID, wfEntity.GetVersion())
+	if _, ok := visited[visitedKey]; ok {
+		return 0, nil
+	}
+	visited[visitedKey] = struct{}{}
+	maxRounds := int64(0)
+	c := &vo.Canvas{}
+	if err := sonic.UnmarshalString(wfEntity.Canvas, c); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal canvas: %w", err)
+	}
+	var (
+		n          *vo.Node
+		nodeFinder func(nodes []*vo.Node) *vo.Node
+	)
+	nodeFinder = func(nodes []*vo.Node) *vo.Node {
+		for i := range nodes {
+			if nodes[i].ID == nodeID {
+				return nodes[i]
+			}
+			if len(nodes[i].Blocks) > 0 {
+				if n := nodeFinder(nodes[i].Blocks); n != nil {
+					return n
+				}
+			}
+		}
+		return nil
+	}
+
+	n = nodeFinder(c.Nodes)
+	if n.Type == entity.NodeTypeLLM.IDStr() {
+		if n.Data == nil || n.Data.Inputs == nil {
+			return 0, nil
+		}
+		param := n.Data.Inputs.LLMParam
+		bs, _ := sonic.Marshal(param)
+		llmParam := make(vo.LLMParam, 0)
+		if err := sonic.Unmarshal(bs, &llmParam); err != nil {
+			return 0, err
+		}
+		var chatHistoryEnabled bool
+		var chatHistoryRound int64
+		for _, param := range llmParam {
+			switch param.Name {
+			case "enableChatHistory":
+				if val, ok := param.Input.Value.Content.(bool); ok {
+					b := val
+					chatHistoryEnabled = b
+				}
+			case "chatHistoryRound":
+				if strVal, ok := param.Input.Value.Content.(string); ok {
+					int64Val, err := strconv.ParseInt(strVal, 10, 64)
+					if err != nil {
+						return 0, err
+					}
+					chatHistoryRound = int64Val
+				}
+			}
+		}
+		if chatHistoryEnabled {
+			return chatHistoryRound, nil
+		}
+		return 0, nil
+	}
+
+	if n.Type == entity.NodeTypeIntentDetector.IDStr() || n.Type == entity.NodeTypeKnowledgeRetriever.IDStr() {
+		if n.Data != nil && n.Data.Inputs != nil && n.Data.Inputs.ChatHistorySetting != nil && n.Data.Inputs.ChatHistorySetting.EnableChatHistory {
+			return n.Data.Inputs.ChatHistorySetting.ChatHistoryRound, nil
+		}
+		return 0, nil
+	}
+
+	if n.Type == entity.NodeTypeSubWorkflow.IDStr() {
+		if n.Data != nil && n.Data.Inputs != nil {
+			workflowIDStr := n.Data.Inputs.WorkflowID
+			if workflowIDStr == "" {
+				return 0, nil
+			}
+			workflowID, err := strconv.ParseInt(workflowIDStr, 10, 64)
+			if err != nil {
+				return 0, fmt.Errorf("invalid workflow ID in sub-workflow node %s: %w", n.ID, err)
+			}
+			subWfEntity, err := repo.GetEntity(ctx, &vo.GetPolicy{
+				ID:      workflowID,
+				QType:   ternary.IFElse(len(n.Data.Inputs.WorkflowVersion) == 0, vo.FromDraft, vo.FromSpecificVersion),
+				Version: n.Data.Inputs.WorkflowVersion,
+			})
+			if err != nil {
+				return 0, fmt.Errorf("failed to get sub-workflow entity %d: %w", workflowID, err)
+			}
+			if err := getMaxHistoryRoundsRecursiveHelper(ctx, subWfEntity, repo, visited, &maxRounds); err != nil {
+				return 0, err
+			}
+			return maxRounds, nil
+		}
+	}
+
+	if len(n.Blocks) > 0 {
+		if err := collectMaxHistoryRounds(ctx, n.Blocks, repo, visited, &maxRounds); err != nil {
+			return 0, err
+		}
+	}
+	return maxRounds, nil
 }
