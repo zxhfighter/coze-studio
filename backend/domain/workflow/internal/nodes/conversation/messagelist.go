@@ -155,7 +155,7 @@ func (m *MessageList) Invoke(ctx context.Context, input map[string]any) (map[str
 		}, nil
 	}
 
-	limit, ok := input["Limit"].(int64)
+	limit, ok := input["limit"].(int64)
 	if ok {
 		if limit > 0 && limit <= 50 {
 			req.Limit = limit
