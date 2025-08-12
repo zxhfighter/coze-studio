@@ -564,6 +564,7 @@ func (c *runImpl) pullWfStream(ctx context.Context, events *schema.StreamReader[
 			c.handlerErr(ctx, re, sw)
 			return
 		}
+
 		if st == nil {
 			continue
 		}
