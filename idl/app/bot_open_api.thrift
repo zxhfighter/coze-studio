@@ -46,8 +46,41 @@ struct GetBotOnlineInfoResp {
     3: required bot_common.OpenAPIBotInfo data
 }
 
+struct WorkspacePermission {
+    1: list<string> workspace_id_list
+    2: list<string> permission_list
+}
+
+struct AccountPermission {
+    1: list<string> permission_list
+}
+
+struct Scope {
+    1: WorkspacePermission workspace_permission
+    2: AccountPermission account_permission
+}
+
+struct ImpersonateCozeUserRequest {
+    1: i64 duration_seconds
+    2: Scope scope
+}
+
+struct ImpersonateCozeUserResponse {
+    1: required i32 code
+    2: required string msg
+    3: ImpersonateCozeUserResponseData data
+}
+
+struct ImpersonateCozeUserResponseData {
+    1: required string access_token
+    2: required i64 expires_in
+    3: required string token_type
+}
+
 service BotOpenApiService {
     OauthAuthorizationCodeResp OauthAuthorizationCode(1: OauthAuthorizationCodeReq request)(api.get='/api/oauth/authorization_code', api.category="oauth", api.gen_path="oauth")
+
+    ImpersonateCozeUserResponse ImpersonateCozeUser (1: ImpersonateCozeUserRequest request) (api.post="/api/permission_api/coze_web_app/impersonate_coze_user")
 
     //openapi
     GetBotOnlineInfoResp GetBotOnlineInfo(1: GetBotOnlineInfoReq request)(api.get='/v1/bot/get_online_info', api.category="bot", api.tag="openapi", api.gen_path="personal_api")
