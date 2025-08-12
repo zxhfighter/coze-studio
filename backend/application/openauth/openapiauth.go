@@ -116,7 +116,7 @@ func (s *OpenAuthApplicationService) ImpersonateCozeUserAccessToken(ctx context.
 	resp := new(bot_open_api.ImpersonateCozeUserResponse)
 	userID := ctxutil.GetUIDFromCtx(ctx)
 
-	expiredSecond := time.Second * 60 * 10
+	expiredSecond := time.Second * 60 * 15
 	appReq := &entity.CreateApiKey{
 		UserID: *userID,
 	}
@@ -128,8 +128,8 @@ func (s *OpenAuthApplicationService) ImpersonateCozeUserAccessToken(ctx context.
 	}
 	resp.Data = &bot_open_api.ImpersonateCozeUserResponseData{
 		AccessToken: apiKeyResp.ApiKey,
-		ExpiresIn:   time.Now().Add(time.Duration(expiredSecond) * time.Hour * 24).Unix(),
-		TokenType:   "",
+		ExpiresIn:   time.Now().Add(time.Duration(expiredSecond)).Unix(),
+		TokenType:   "Bearer",
 	}
 	return resp, nil
 }

@@ -48,11 +48,20 @@ type ExecuteConfig = vo.ExecuteConfig
 type WorkflowMessage = workflowEntity.Message
 type ExecuteMode = vo.ExecuteMode
 type NodeType = entity.NodeType
+type MessageType = entity.MessageType
+type InterruptEvent = workflowEntity.InterruptEvent
+type EventType = workflowEntity.InterruptEventType
 
-type WorkflowMessage = entity.Message
+const (
+	Answer       MessageType = "answer"
+	FunctionCall MessageType = "function_call"
+	ToolResponse MessageType = "tool_response"
+)
 
 const (
 	NodeTypeOutputEmitter NodeType = "OutputEmitter"
+	NodeTypeInputReceiver NodeType = "InputReceiver"
+	NodeTypeQuestion      NodeType = "Question"
 )
 
 const (

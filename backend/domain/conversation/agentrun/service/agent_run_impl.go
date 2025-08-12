@@ -182,17 +182,11 @@ func (c *runImpl) handlerWfAsAgentStreamExecute(ctx context.Context, sw *schema.
 	}, map[string]any{
 		"input": concatWfInput(rtDependence),
 	})
-	mainChan := make(chan *entity.AgentRespEvent, 100)
-
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 	safego.Go(ctx, func() {
 		defer wg.Done()
-		c.pullWfStream(ctx, mainChan, wfStreamer)
-	})
-	safego.Go(ctx, func() {
-		defer wg.Done()
-		c.push(ctx, mainChan, sw, rtDependence)
+		c.pullWfStream(ctx, wfStreamer, rtDependence, sw)
 	})
 	wg.Wait()
 	return err
@@ -490,24 +484,190 @@ func (c *runImpl) handlerInput(ctx context.Context, sw *schema.StreamWriter[*ent
 	}
 	return cm, nil
 }
-func (c *runImpl) pullWfStream(ctx context.Context, mainChan chan *entity.AgentRespEvent, events *schema.StreamReader[*crossworkflow.WorkflowMessage]) {
-	defer func() {
-		close(mainChan)
+func (c *runImpl) pullWfStream(ctx context.Context, events *schema.StreamReader[*crossworkflow.WorkflowMessage], rtDependence *runtimeDependence, sw *schema.StreamWriter[*entity.AgentRunResponse]) {
 
-	}()
+	fullAnswerContent := bytes.NewBuffer([]byte{})
+	var usage *msgEntity.UsageExt
+
+	preAnswerMsg, cErr := c.PreCreateAnswer(ctx, rtDependence)
+
+	if cErr != nil {
+		return
+	}
+
+	var preMsgIsFinish = false
+
 	for {
 		st, re := events.Recv()
 		logs.CtxInfof(ctx, "pullWfStream Recv:%v,err:%v", conv.DebugJsonToStr(st), re)
 		if re != nil {
-			errChunk := &entity.AgentRespEvent{
-				Err: re,
+			if errors.Is(re, io.EOF) {
+				return
 			}
-			mainChan <- errChunk
+			logs.CtxErrorf(ctx, "pullWfStream Recv error: %v", re)
+
+			c.handlerErr(ctx, re, sw)
 			return
 		}
+		if st == nil {
+			continue
+		}
 
+		if st.StateMessage != nil && st.StateMessage.InterruptEvent != nil { // interrupt
+			c.handlerWfInterruptMsg(ctx, sw, st.StateMessage.InterruptEvent, rtDependence)
+			continue
+		}
+
+		if st.DataMessage == nil {
+			continue
+		}
+
+		switch st.DataMessage.Type {
+		case crossworkflow.Answer:
+
+			// input node & question node skip
+
+			if st.DataMessage != nil && (st.DataMessage.NodeType == crossworkflow.NodeTypeInputReceiver || st.DataMessage.NodeType == crossworkflow.NodeTypeQuestion) {
+				break
+			}
+
+			if preMsgIsFinish {
+				preAnswerMsg, cErr = c.PreCreateAnswer(ctx, rtDependence)
+				if cErr != nil {
+					return
+				}
+				preMsgIsFinish = false
+			}
+			if st.DataMessage.Usage != nil {
+				usage = &msgEntity.UsageExt{
+					InputTokens:  st.DataMessage.Usage.InputTokens,
+					OutputTokens: st.DataMessage.Usage.OutputTokens,
+					TotalCount:   st.DataMessage.Usage.InputTokens + st.DataMessage.Usage.OutputTokens,
+				}
+			}
+			if st.DataMessage.Last {
+				preMsgIsFinish = true
+				sendAnswerMsg := c.buildSendMsg(ctx, preAnswerMsg, false, rtDependence)
+				sendAnswerMsg.Content = fullAnswerContent.String()
+				fullAnswerContent.Reset()
+				hfErr := c.handlerAnswer(ctx, sendAnswerMsg, sw, usage, rtDependence, preAnswerMsg)
+				if hfErr != nil {
+					return
+				}
+			}
+			sendAnswerMsg := c.buildSendMsg(ctx, preAnswerMsg, false, rtDependence)
+			sendAnswerMsg.Content = st.DataMessage.Content
+			fullAnswerContent.WriteString(st.DataMessage.Content)
+			c.runEvent.SendMsgEvent(entity.RunEventMessageDelta, sendAnswerMsg, sw)
+		}
 	}
 }
+
+func (c *runImpl) handlerWfInterruptMsg(ctx context.Context, sw *schema.StreamWriter[*entity.AgentRunResponse], interruptEventData *crossworkflow.InterruptEvent, rtDependence *runtimeDependence) {
+	interruptData, cType, err := c.handlerWfInterruptEvent(ctx, interruptEventData)
+	if err != nil {
+		return
+	}
+	preMsg, err := c.PreCreateAnswer(ctx, rtDependence)
+	if err != nil {
+		return
+	}
+	deltaAnswer := &entity.ChunkMessageItem{
+		ID:             preMsg.ID,
+		ConversationID: preMsg.ConversationID,
+		SectionID:      preMsg.SectionID,
+		RunID:          preMsg.RunID,
+		AgentID:        preMsg.AgentID,
+		Role:           entity.RoleType(preMsg.Role),
+		Content:        interruptData,
+		MessageType:    preMsg.MessageType,
+		ContentType:    cType,
+		ReplyID:        preMsg.RunID,
+		Ext:            preMsg.Ext,
+		IsFinish:       false,
+	}
+
+	c.runEvent.SendMsgEvent(entity.RunEventMessageDelta, deltaAnswer, sw)
+	finalAnswer := deepcopy.Copy(deltaAnswer).(*entity.ChunkMessageItem)
+
+	err = c.handlerAnswer(ctx, finalAnswer, sw, nil, rtDependence, preMsg)
+	if err != nil {
+		return
+	}
+
+	// err = c.handlerInterruptVerbose(ctx, chunk, sw, rtDependence)
+	// if err != nil {
+	// 	return
+	// }
+}
+func (c *runImpl) handlerWfInterruptEvent(_ context.Context, interruptEventData *crossworkflow.InterruptEvent) (string, message.ContentType, error) {
+
+	type msg struct {
+		Type        string `json:"type,omitempty"`
+		ContentType string `json:"content_type"`
+		Content     any    `json:"content"` // either optionContent or string
+		ID          string `json:"id,omitempty"`
+	}
+
+	defaultContentType := message.ContentTypeText
+	switch singleagent.InterruptEventType(interruptEventData.EventType) {
+	case singleagent.InterruptEventType_OauthPlugin:
+
+	case singleagent.InterruptEventType_Question:
+		var iData map[string][]*msg
+		err := json.Unmarshal([]byte(interruptEventData.InterruptData), &iData)
+		if err != nil {
+			return "", defaultContentType, err
+		}
+		if len(iData["messages"]) == 0 {
+			return "", defaultContentType, errorx.New(errno.ErrInterruptDataEmpty)
+		}
+		interruptMsg := iData["messages"][0]
+
+		if interruptMsg.ContentType == "text" {
+			return interruptMsg.Content.(string), defaultContentType, nil
+		} else if interruptMsg.ContentType == "option" || interruptMsg.ContentType == "form_schema" {
+			iMarshalData, err := json.Marshal(interruptMsg)
+			if err != nil {
+				return "", defaultContentType, err
+			}
+			return string(iMarshalData), message.ContentTypeCard, nil
+		}
+	case singleagent.InterruptEventType_InputNode:
+		data := interruptEventData.InterruptData
+		return data, message.ContentTypeCard, nil
+	case singleagent.InterruptEventType_WorkflowLLM:
+		data := interruptEventData.ToolInterruptEvent.InterruptData
+		if singleagent.InterruptEventType(interruptEventData.EventType) == singleagent.InterruptEventType_InputNode {
+			return data, message.ContentTypeCard, nil
+		}
+		if singleagent.InterruptEventType(interruptEventData.EventType) == singleagent.InterruptEventType_Question {
+			var iData map[string][]*msg
+			err := json.Unmarshal([]byte(data), &iData)
+			if err != nil {
+				return "", defaultContentType, err
+			}
+			if len(iData["messages"]) == 0 {
+				return "", defaultContentType, errorx.New(errno.ErrInterruptDataEmpty)
+			}
+			interruptMsg := iData["messages"][0]
+
+			if interruptMsg.ContentType == "text" {
+				return interruptMsg.Content.(string), defaultContentType, nil
+			} else if interruptMsg.ContentType == "option" || interruptMsg.ContentType == "form_schema" {
+				iMarshalData, err := json.Marshal(interruptMsg)
+				if err != nil {
+					return "", defaultContentType, err
+				}
+				return string(iMarshalData), message.ContentTypeCard, nil
+			}
+		}
+		return "", defaultContentType, errorx.New(errno.ErrUnknowInterruptType)
+
+	}
+	return "", defaultContentType, errorx.New(errno.ErrUnknowInterruptType)
+}
+
 func (c *runImpl) pull(_ context.Context, mainChan chan *entity.AgentRespEvent, events *schema.StreamReader[*crossagent.AgentEvent]) {
 	defer func() {
 		close(mainChan)
@@ -842,7 +1002,7 @@ func (c *runImpl) saveReasoningContent(ctx context.Context, firstAnswerMsg *msgE
 	}
 }
 
-func (c *runImpl) handlerInterrupt(ctx context.Context, chunk *entity.AgentRespEvent, sw *schema.StreamWriter[*entity.AgentRunResponse], rtDependence *runtimeDependence, firstAnswerMsg *msgEntity.Message, reasoningCOntent string) error {
+func (c *runImpl) handlerInterrupt(ctx context.Context, chunk *entity.AgentRespEvent, sw *schema.StreamWriter[*entity.AgentRunResponse], rtDependence *runtimeDependence, firstAnswerMsg *msgEntity.Message, reasoningContent string) error {
 	interruptData, cType, err := c.parseInterruptData(ctx, chunk.Interrupt)
 	if err != nil {
 		return err
@@ -868,8 +1028,8 @@ func (c *runImpl) handlerInterrupt(ctx context.Context, chunk *entity.AgentRespE
 
 	c.runEvent.SendMsgEvent(entity.RunEventMessageDelta, deltaAnswer, sw)
 	finalAnswer := deepcopy.Copy(deltaAnswer).(*entity.ChunkMessageItem)
-	if len(reasoningCOntent) > 0 && firstAnswerMsg == nil {
-		finalAnswer.ReasoningContent = ptr.Of(reasoningCOntent)
+	if len(reasoningContent) > 0 && firstAnswerMsg == nil {
+		finalAnswer.ReasoningContent = ptr.Of(reasoningContent)
 	}
 	err = c.handlerAnswer(ctx, finalAnswer, sw, nil, rtDependence, preMsg)
 	if err != nil {
