@@ -4031,7 +4031,6 @@ func (w *ApplicationService) convertChatFlowRole(ctx context.Context, role *enti
 
 	return res, nil
 }
-<<<<<<< HEAD
 
 func (w *ApplicationService) OpenAPIGetWorkflowInfo(ctx context.Context, req *workflow.OpenAPIGetWorkflowInfoRequest) (
 	_ *workflow.OpenAPIGetWorkflowInfoResponse, err error) {

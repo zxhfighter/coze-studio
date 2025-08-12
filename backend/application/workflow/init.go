@@ -24,9 +24,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-studio/backend/application/internal"
-
-	wfconversation "github.com/coze-dev/coze-studio/backend/crossdomain/workflow/conversation"
-
 	"github.com/coze-dev/coze-studio/backend/crossdomain/impl/code"
 	wfconversation "github.com/coze-dev/coze-studio/backend/crossdomain/workflow/conversation"
 	wfplugin "github.com/coze-dev/coze-studio/backend/crossdomain/workflow/plugin"
@@ -38,10 +35,6 @@ import (
 	plugin "github.com/coze-dev/coze-studio/backend/domain/plugin/service"
 	search "github.com/coze-dev/coze-studio/backend/domain/search/service"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow"
-<<<<<<< HEAD
-	crossconversation "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
-=======
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 	crossplugin "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/plugin"
 	crosssearch "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/search"
 	crossvariable "github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/variable"

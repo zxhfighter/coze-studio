@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /*
  * Copyright 2025 coze-dev Authors
  *
@@ -14,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 
 package conversation
 
@@ -46,12 +44,9 @@ func Test_convertMessage(t *testing.T) {
 				lr: &entity.ListResult{
 					Messages: []*entity.Message{
 						{
-							ID:          1,
-<<<<<<< HEAD
-							Role:        schema.User,
-=======
-							Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+							ID:   1,
+							Role: schema.User,
+
 							ContentType: "text",
 							MultiContent: []*apimessage.InputMetaData{
 								{
@@ -66,12 +61,9 @@ func Test_convertMessage(t *testing.T) {
 			want: &conversation.MessageListResponse{
 				Messages: []*conversation.Message{
 					{
-						ID:          1,
-<<<<<<< HEAD
-						Role:        schema.User,
-=======
-						Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+						ID:   1,
+						Role: schema.User,
+
 						ContentType: "text",
 						MultiContent: []*conversation.Content{
 							{Type: "text", Text: ptr.Of("hello")},
@@ -86,23 +78,16 @@ func Test_convertMessage(t *testing.T) {
 				lr: &entity.ListResult{
 					Messages: []*entity.Message{
 						{
-							ID:          2,
-<<<<<<< HEAD
-							Role:        schema.User,
-=======
-							Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+							ID:   2,
+							Role: schema.User,
+
 							ContentType: "file",
 							MultiContent: []*apimessage.InputMetaData{
 								{
 									Type: "file",
 									FileData: []*apimessage.FileData{
 										{
-<<<<<<< HEAD
 											URI: "f_uri_1",
-=======
-											Url: "f_uri_1",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 										},
 									},
 								},
@@ -119,11 +104,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          2,
-<<<<<<< HEAD
 						Role:        schema.User,
-=======
-						Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 						ContentType: "file",
 						MultiContent: []*conversation.Content{
 							{Type: "file", Uri: ptr.Of("f_uri_1")},
@@ -139,12 +120,9 @@ func Test_convertMessage(t *testing.T) {
 				lr: &entity.ListResult{
 					Messages: []*entity.Message{
 						{
-							ID:          3,
-<<<<<<< HEAD
-							Role:        schema.User,
-=======
-							Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+							ID:   3,
+							Role: schema.User,
+
 							ContentType: "text_file",
 							MultiContent: []*apimessage.InputMetaData{
 								{
@@ -155,11 +133,7 @@ func Test_convertMessage(t *testing.T) {
 									Type: "file",
 									FileData: []*apimessage.FileData{
 										{
-<<<<<<< HEAD
 											URI: "f_uri_2",
-=======
-											Url: "f_uri_2",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 										},
 									},
 								},
@@ -172,11 +146,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          3,
-<<<<<<< HEAD
 						Role:        schema.User,
-=======
-						Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 						ContentType: "text_file",
 						MultiContent: []*conversation.Content{
 							{Type: "text", Text: ptr.Of("hello")},
@@ -192,29 +162,20 @@ func Test_convertMessage(t *testing.T) {
 				lr: &entity.ListResult{
 					Messages: []*entity.Message{
 						{
-							ID:          4,
-<<<<<<< HEAD
-							Role:        schema.User,
-=======
-							Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+							ID: 4,
+
+							Role: schema.User,
+
 							ContentType: "file",
 							MultiContent: []*apimessage.InputMetaData{
 								{
 									Type: "file",
 									FileData: []*apimessage.FileData{
 										{
-<<<<<<< HEAD
 											URI: "f_uri_3",
 										},
 										{
 											URI: "f_uri_4",
-=======
-											Url: "f_uri_3",
-										},
-										{
-											Url: "f_uri_4",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 										},
 									},
 								},
@@ -231,11 +192,7 @@ func Test_convertMessage(t *testing.T) {
 				Messages: []*conversation.Message{
 					{
 						ID:          4,
-<<<<<<< HEAD
 						Role:        schema.User,
-=======
-						Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 						ContentType: "file",
 						MultiContent: []*conversation.Content{
 							{Type: "file", Uri: ptr.Of("f_uri_3")},
@@ -252,12 +209,9 @@ func Test_convertMessage(t *testing.T) {
 				lr: &entity.ListResult{
 					Messages: []*entity.Message{
 						{
-							ID:          5,
-<<<<<<< HEAD
-							Role:        schema.User,
-=======
-							Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+							ID:   5,
+							Role: schema.User,
+
 							ContentType: "text",
 							MultiContent: []*apimessage.InputMetaData{
 								{
@@ -272,12 +226,9 @@ func Test_convertMessage(t *testing.T) {
 			want: &conversation.MessageListResponse{
 				Messages: []*conversation.Message{
 					{
-						ID:          5,
-<<<<<<< HEAD
-						Role:        schema.User,
-=======
-						Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+						ID:   5,
+						Role: schema.User,
+
 						ContentType: "text",
 						MultiContent: []*conversation.Content{
 							{Type: "text", Text: ptr.Of("")},
@@ -292,23 +243,16 @@ func Test_convertMessage(t *testing.T) {
 				lr: &entity.ListResult{
 					Messages: []*entity.Message{
 						{
-							ID:          6,
-<<<<<<< HEAD
-							Role:        schema.User,
-=======
-							Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+							ID:   6,
+							Role: schema.User,
+
 							ContentType: "image",
 							MultiContent: []*apimessage.InputMetaData{
 								{
 									Type: "image",
 									FileData: []*apimessage.FileData{
 										{
-<<<<<<< HEAD
 											URI: "image_uri_5",
-=======
-											Url: "image_uri_5",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 										},
 									},
 								},
@@ -324,12 +268,9 @@ func Test_convertMessage(t *testing.T) {
 			want: &conversation.MessageListResponse{
 				Messages: []*conversation.Message{
 					{
-						ID:          6,
-<<<<<<< HEAD
-						Role:        schema.User,
-=======
-						Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+						ID:   6,
+						Role: schema.User,
+
 						ContentType: "image",
 						MultiContent: []*conversation.Content{
 							{Type: "image", Uri: ptr.Of("image_uri_5")},
@@ -345,29 +286,19 @@ func Test_convertMessage(t *testing.T) {
 				lr: &entity.ListResult{
 					Messages: []*entity.Message{
 						{
-							ID:          7,
-<<<<<<< HEAD
-							Role:        schema.User,
-=======
-							Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+							ID:   7,
+							Role: schema.User,
+
 							ContentType: "image",
 							MultiContent: []*apimessage.InputMetaData{
 								{
 									Type: "image",
 									FileData: []*apimessage.FileData{
 										{
-<<<<<<< HEAD
 											URI: "file_id_6",
 										},
 										{
 											URI: "file_id_7",
-=======
-											Url: "file_id_6",
-										},
-										{
-											Url: "file_id_7",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 										},
 									},
 								},
@@ -383,12 +314,9 @@ func Test_convertMessage(t *testing.T) {
 			want: &conversation.MessageListResponse{
 				Messages: []*conversation.Message{
 					{
-						ID:          7,
-<<<<<<< HEAD
-						Role:        schema.User,
-=======
-						Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+						ID:   7,
+						Role: schema.User,
+
 						ContentType: "image",
 						MultiContent: []*conversation.Content{
 							{Type: "image", Uri: ptr.Of("file_id_6")},
@@ -405,12 +333,9 @@ func Test_convertMessage(t *testing.T) {
 				lr: &entity.ListResult{
 					Messages: []*entity.Message{
 						{
-							ID:          8,
-<<<<<<< HEAD
-							Role:        schema.User,
-=======
-							Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+							ID:   8,
+							Role: schema.User,
+
 							ContentType: "mix",
 							MultiContent: []*apimessage.InputMetaData{
 								{
@@ -421,11 +346,7 @@ func Test_convertMessage(t *testing.T) {
 									Type: "image",
 									FileData: []*apimessage.FileData{
 										{
-<<<<<<< HEAD
 											URI: "file_id_8",
-=======
-											Url: "file_id_8",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 										},
 									},
 								},
@@ -433,11 +354,7 @@ func Test_convertMessage(t *testing.T) {
 									Type: "file",
 									FileData: []*apimessage.FileData{
 										{
-<<<<<<< HEAD
 											URI: "file_id_9",
-=======
-											Url: "file_id_9",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 										},
 									},
 								},
@@ -449,12 +366,9 @@ func Test_convertMessage(t *testing.T) {
 			want: &conversation.MessageListResponse{
 				Messages: []*conversation.Message{
 					{
-						ID:          8,
-<<<<<<< HEAD
-						Role:        schema.User,
-=======
-						Role:        "user",
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
+						ID:   8,
+						Role: schema.User,
+
 						ContentType: "mix",
 						MultiContent: []*conversation.Content{
 							{Type: "text", Text: ptr.Of("hello")},

@@ -69,7 +69,6 @@ type ConversationService interface {
 	InitApplicationDefaultConversationTemplate(ctx context.Context, spaceID int64, appID int64, userID int64) error
 	GetOrCreateConversation(ctx context.Context, env vo.Env, appID, connectorID, userID int64, conversationName string) (int64, error)
 	UpdateConversation(ctx context.Context, env vo.Env, appID, connectorID, userID int64, conversationName string) (int64, error)
-
 }
 
 type InterruptEventStore interface {
@@ -130,9 +129,6 @@ type ConversationRepository interface {
 	ListDynamicConversation(ctx context.Context, env vo.Env, policy *vo.ListConversationPolicy) ([]*entity.DynamicConversation, error)
 	BatchCreateOnlineConversationTemplate(ctx context.Context, templates []*entity.ConversationTemplate, version string) error
 	UpdateDynamicConversationNameByID(ctx context.Context, env vo.Env, templateID int64, name string) error
-<<<<<<< HEAD
 	UpdateStaticConversation(ctx context.Context, env vo.Env, templateID int64, connectorID int64, userID int64, newConversationID int64) error
 	UpdateDynamicConversation(ctx context.Context, env vo.Env, conversationID, newConversationID int64) error
-=======
->>>>>>> a86ea8d1 (feat(backend):workflow support conversation manager & add conversation/message nodes)
 }
