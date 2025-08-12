@@ -40,6 +40,7 @@ type Workflow interface {
 	GetWorkflowIDsByAppID(ctx context.Context, appID int64) ([]int64, error)
 	SyncExecuteWorkflow(ctx context.Context, config vo.ExecuteConfig, input map[string]any) (*workflowEntity.WorkflowExecution, vo.TerminatePlan, error)
 	StreamExecute(ctx context.Context, config vo.ExecuteConfig, input map[string]any) (*schema.StreamReader[*workflowEntity.Message], error)
+	StreamResume(ctx context.Context, req *entity.ResumeRequest, config vo.ExecuteConfig) (*schema.StreamReader[*entity.Message], error)
 	WithExecuteConfig(cfg vo.ExecuteConfig) einoCompose.Option
 	WithMessagePipe() (compose.Option, *schema.StreamReader[*entity.Message])
 	InitApplicationDefaultConversationTemplate(ctx context.Context, spaceID int64, appID int64, userID int64) error
@@ -47,11 +48,13 @@ type Workflow interface {
 
 type ExecuteConfig = vo.ExecuteConfig
 type WorkflowMessage = workflowEntity.Message
+type StateMessage = workflowEntity.StateMessage
 type ExecuteMode = vo.ExecuteMode
 type NodeType = entity.NodeType
 type MessageType = entity.MessageType
 type InterruptEvent = workflowEntity.InterruptEvent
 type EventType = workflowEntity.InterruptEventType
+type ResumeRequest = entity.ResumeRequest
 
 const (
 	Answer       MessageType = "answer"
