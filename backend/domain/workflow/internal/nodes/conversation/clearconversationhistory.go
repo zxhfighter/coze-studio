@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	wf "github.com/coze-dev/coze-studio/backend/domain/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
@@ -123,11 +124,14 @@ func (c *ClearConversationHistory) Invoke(ctx context.Context, in map[string]any
 		}, nil
 	}
 
-	err = c.Manager.ClearConversationHistory(ctx, &conversation.ClearConversationHistoryReq{
+	sectionID, err := c.Manager.ClearConversationHistory(ctx, &conversation.ClearConversationHistoryReq{
 		ConversationID: conversationID,
 	})
 	if err != nil {
 		return nil, vo.WrapError(errno.ErrConversationNodesNotAvailable, err)
+	}
+	if execCtx.ExeCfg.SectionID != nil {
+		atomic.StoreInt64(execCtx.ExeCfg.SectionID, sectionID)
 	}
 	return map[string]any{
 		"isSuccess": true,

@@ -1002,6 +1002,11 @@ func (i *impl) prefetchChatHistory(ctx context.Context, config vo.ExecuteConfig,
 	agentID := config.AgentID
 	appID := config.AppID
 	userID := config.Operator
+	sectionID := config.SectionID
+	if sectionID == nil {
+		logs.CtxWarnf(ctx, "SectionID is nil, skipping chat history")
+		return nil, nil
+	}
 
 	if convID == nil || *convID == 0 {
 		logs.CtxWarnf(ctx, "ConversationID is 0 or nil, skipping chat history")
@@ -1023,6 +1028,7 @@ func (i *impl) prefetchChatHistory(ctx context.Context, config vo.ExecuteConfig,
 		AppID:          resolvedAppID,
 		UserID:         userID,
 		Rounds:         historyRounds,
+		SectionID:      *sectionID,
 	}
 
 	manager := conversation.GetConversationManager()
