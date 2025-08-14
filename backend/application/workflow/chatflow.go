@@ -20,11 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	crossconversation "github.com/coze-dev/coze-studio/backend/crossdomain/contract/conversation"
-	crossmessage "github.com/coze-dev/coze-studio/backend/crossdomain/contract/message"
 	"runtime/debug"
 	"strconv"
 	"strings"
+
+	crossconversation "github.com/coze-dev/coze-studio/backend/crossdomain/contract/conversation"
+	crossmessage "github.com/coze-dev/coze-studio/backend/crossdomain/contract/message"
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
@@ -592,6 +593,7 @@ func (w *ApplicationService) OpenAPIChatFlowRun(ctx context.Context, req *workfl
 			AgentID:        agentID,
 			ConversationID: ptr.Of(conversationID),
 			RoundID:        ptr.Of(roundID),
+			InitRoundID:    ptr.Of(roundID),
 		})
 		if err != nil {
 			uErr := unbinding()
@@ -655,8 +657,9 @@ func (w *ApplicationService) OpenAPIChatFlowRun(ctx context.Context, req *workfl
 		BizType:        vo.BizTypeWorkflow,
 		ConversationID: ptr.Of(conversationID),
 		RoundID:        ptr.Of(roundID),
+		InitRoundID:    ptr.Of(roundID),
 		UserMessage:    userSchemaMessage,
-		Cancellable:    isDebug == true,
+		Cancellable:    isDebug,
 	}
 
 	parameters["USER_INPUT"], err = w.makeChatFlowUserInput(ctx, lastUserMessage)

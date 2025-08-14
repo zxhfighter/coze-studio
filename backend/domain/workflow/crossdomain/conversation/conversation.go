@@ -96,6 +96,7 @@ type GetLatestRunIDsRequest struct {
 	UserID         int64
 	AppID          int64
 	Rounds         int64
+	InitRunID      *int64
 }
 type ClearConversationHistoryReq struct {
 	ConversationID int64

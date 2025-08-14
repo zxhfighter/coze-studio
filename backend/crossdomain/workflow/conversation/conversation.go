@@ -24,8 +24,10 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/coze-dev/coze-studio/backend/api/model/conversation/common"
 	"github.com/coze-dev/coze-studio/backend/api/model/crossdomain/message"
+	crossagentrun "github.com/coze-dev/coze-studio/backend/crossdomain/contract/agentrun"
 	crossconversation "github.com/coze-dev/coze-studio/backend/crossdomain/contract/conversation"
 	crossmessage "github.com/coze-dev/coze-studio/backend/crossdomain/contract/message"
+	agententity "github.com/coze-dev/coze-studio/backend/domain/conversation/agentrun/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/conversation/conversation/entity"
 	msgentity "github.com/coze-dev/coze-studio/backend/domain/conversation/message/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
@@ -147,7 +149,25 @@ func (c *ConversationRepository) EditMessage(ctx context.Context, req *conversat
 }
 
 func (c *ConversationRepository) GetLatestRunIDs(ctx context.Context, req *conversation.GetLatestRunIDsRequest) ([]int64, error) {
-	return []int64{0}, nil
+	listMeta := &agententity.ListRunRecordMeta{
+		ConversationID: req.ConversationID,
+		AgentID:        req.AppID,
+		Limit:          int32(req.Rounds),
+	}
+
+	if req.InitRunID != nil {
+		listMeta.BeforeID = *req.InitRunID
+	}
+
+	runRecords, err := crossagentrun.DefaultSVC().List(ctx, listMeta)
+	if err != nil {
+		return nil, err
+	}
+	runIDs := make([]int64, 0, len(runRecords))
+	for _, record := range runRecords {
+		runIDs = append(runIDs, record.ID)
+	}
+	return runIDs, nil
 }
 
 func (c *ConversationRepository) GetMessagesByRunIDs(ctx context.Context, req *conversation.GetMessagesByRunIDsRequest) (*conversation.GetMessagesByRunIDsResponse, error) {
