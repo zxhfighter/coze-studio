@@ -18,6 +18,7 @@ package vo
 
 import (
 	"github.com/cloudwego/eino/schema"
+
 	"github.com/coze-dev/coze-studio/backend/api/model/workflow"
 	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 )
@@ -45,6 +46,7 @@ type ExecuteConfig struct {
 	UserMessage         *schema.Message
 	ConversationHistory []*conversation.Message
 	SectionID           *int64
+	MaxHistoryRounds    *int32
 }
 
 type ExecuteMode string
