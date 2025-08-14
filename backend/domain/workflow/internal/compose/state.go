@@ -19,6 +19,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"strconv"
 	"strings"
 
@@ -88,6 +89,7 @@ func init() {
 	_ = compose.RegisterSerializableType[*execute.AppVariables]("app_variables")
 	_ = compose.RegisterSerializableType[workflow2.WorkflowMode]("workflow_mode")
 	_ = compose.RegisterSerializableType[*schema.Message]("schema_message")
+	_ = compose.RegisterSerializableType[*conversation.Message]("history_messages")
 
 }
 
