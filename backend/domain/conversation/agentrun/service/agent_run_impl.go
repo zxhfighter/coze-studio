@@ -639,6 +639,9 @@ func (c *runImpl) pullWfStream(ctx context.Context, events *schema.StreamReader[
 			if st.DataMessage.Last {
 				preMsgIsFinish = true
 				sendAnswerMsg := c.buildSendMsg(ctx, preAnswerMsg, false, rtDependence)
+				if len(fullAnswerContent.String()) == 0 && st.DataMessage.Content != "" {
+					fullAnswerContent.WriteString(st.DataMessage.Content)
+				}
 				sendAnswerMsg.Content = fullAnswerContent.String()
 				fullAnswerContent.Reset()
 				hfErr := c.handlerAnswer(ctx, sendAnswerMsg, sw, usage, rtDependence, preAnswerMsg)
