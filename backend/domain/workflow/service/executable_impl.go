@@ -319,7 +319,7 @@ func (i *impl) AsyncExecuteNode(ctx context.Context, nodeID string, config vo.Ex
 		messages, err := i.prefetchChatHistory(ctx, config, historyRounds)
 		if err != nil {
 			logs.CtxErrorf(ctx, "failed to prefetch chat history: %v", err)
-		} else if len(messages) > 0 {
+		} else if len(messages) > 0 || messages != nil {
 			config.ConversationHistory = messages
 		}
 	}
@@ -421,7 +421,7 @@ func (i *impl) StreamExecute(ctx context.Context, config vo.ExecuteConfig, input
 		messages, err := i.prefetchChatHistory(ctx, config, historyRounds)
 		if err != nil {
 			logs.CtxErrorf(ctx, "failed to prefetch chat history: %v", err)
-		} else if len(messages) > 0 {
+		} else if len(messages) > 0 || messages != nil {
 			config.ConversationHistory = messages
 		}
 	}
@@ -1027,7 +1027,7 @@ func (i *impl) prefetchChatHistory(ctx context.Context, config vo.ExecuteConfig,
 		ConversationID: *convID,
 		AppID:          resolvedAppID,
 		UserID:         userID,
-		Rounds:         historyRounds,
+		Rounds:         historyRounds + 1,
 		SectionID:      *sectionID,
 	}
 
