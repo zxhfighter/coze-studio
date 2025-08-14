@@ -633,6 +633,9 @@ func (c *runImpl) pullWfStream(ctx context.Context, events *schema.StreamReader[
 				preMsgIsFinish = false
 			}
 
+			if st.DataMessage.Content != "" {
+				fullAnswerContent.WriteString(st.DataMessage.Content)
+			}
 			if st.DataMessage.Last {
 				preMsgIsFinish = true
 				sendAnswerMsg := c.buildSendMsg(ctx, preAnswerMsg, false, rtDependence)
@@ -646,7 +649,7 @@ func (c *runImpl) pullWfStream(ctx context.Context, events *schema.StreamReader[
 			}
 			sendAnswerMsg := c.buildSendMsg(ctx, preAnswerMsg, false, rtDependence)
 			sendAnswerMsg.Content = st.DataMessage.Content
-			fullAnswerContent.WriteString(st.DataMessage.Content)
+
 			c.runEvent.SendMsgEvent(entity.RunEventMessageDelta, sendAnswerMsg, sw)
 		}
 	}

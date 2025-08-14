@@ -19,9 +19,10 @@ package repository
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/coze-dev/coze-studio/backend/domain/upload/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/upload/internal/dal/dao"
-	"gorm.io/gorm"
 )
 
 func NewFilesRepo(db *gorm.DB) FilesRepo {

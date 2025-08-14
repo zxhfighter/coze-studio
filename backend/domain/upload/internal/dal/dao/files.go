@@ -3,11 +3,12 @@ package dao
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/coze-dev/coze-studio/backend/domain/upload/entity"
 	"github.com/coze-dev/coze-studio/backend/domain/upload/internal/dal/model"
 	"github.com/coze-dev/coze-studio/backend/domain/upload/internal/dal/query"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/slices"
-	"gorm.io/gorm"
 )
 
 type FilesDAO struct {

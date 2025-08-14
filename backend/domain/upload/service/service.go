@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 
+	"gorm.io/gorm"
+
 	"github.com/coze-dev/coze-studio/backend/domain/upload/repository"
 	"github.com/coze-dev/coze-studio/backend/infra/contract/idgen"
 	"github.com/coze-dev/coze-studio/backend/pkg/errorx"
 	"github.com/coze-dev/coze-studio/backend/types/errno"
-	"gorm.io/gorm"
 )
 
 type uploadSVC struct {
