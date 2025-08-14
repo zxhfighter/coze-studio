@@ -594,12 +594,19 @@ func (c *runImpl) pullWfStream(ctx context.Context, events *schema.StreamReader[
 		if st == nil {
 			continue
 		}
-		if st.StateMessage != nil && st.StateMessage.Usage != nil {
-			usage = &msgEntity.UsageExt{
-				InputTokens:  st.StateMessage.Usage.InputTokens,
-				OutputTokens: st.StateMessage.Usage.OutputTokens,
-				TotalCount:   st.StateMessage.Usage.InputTokens + st.StateMessage.Usage.OutputTokens,
+		if st.StateMessage != nil {
+			if st.StateMessage.Status == crossworkflow.WorkflowFailed {
+				c.handlerErr(ctx, st.StateMessage.LastError, sw)
+				continue
 			}
+			if st.StateMessage.Usage != nil {
+				usage = &msgEntity.UsageExt{
+					InputTokens:  st.StateMessage.Usage.InputTokens,
+					OutputTokens: st.StateMessage.Usage.OutputTokens,
+					TotalCount:   st.StateMessage.Usage.InputTokens + st.StateMessage.Usage.OutputTokens,
+				}
+			}
+
 		}
 
 		if st.StateMessage != nil && st.StateMessage.InterruptEvent != nil { // interrupt
