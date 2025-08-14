@@ -19,9 +19,10 @@ package compose
 import (
 	"context"
 	"fmt"
-	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 	"strconv"
 	"strings"
+
+	"github.com/coze-dev/coze-studio/backend/domain/workflow/crossdomain/conversation"
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/compose"
@@ -90,6 +91,7 @@ func init() {
 	_ = compose.RegisterSerializableType[workflow2.WorkflowMode]("workflow_mode")
 	_ = compose.RegisterSerializableType[*schema.Message]("schema_message")
 	_ = compose.RegisterSerializableType[*conversation.Message]("history_messages")
+	_ = compose.RegisterSerializableType[*conversation.Content]("content")
 
 }
 
